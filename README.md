@@ -57,18 +57,11 @@ FIREBASE_MESSAGING_SENDER_ID=...
 FIREBASE_APP_ID=...
 ```
 
-Starta backend-servern:
-```bash
-npm run dev
-```
+ ## Run both backend and frontend (from one terminal)
 
-### Frontend
-
-```bash
-cd client  
-npm install
-npm run dev
-```
+  npm run dev
+  
+ This command uses concurrently to run both the frontend (client/) and backend (api/) servers at the same time. No need to run them separately anymore!
 
 ---
 
