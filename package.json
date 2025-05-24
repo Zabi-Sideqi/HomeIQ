@@ -1,0 +1,24 @@
+{
+  "name": "homeiq-1",
+  "version": "1.0.0",
+  "description": "**Homeiq** is a web-based platform where users can buy, sell, rent, and lease properties. Using modern technologies, the system provides a seamless experience with authentication, image management, and a user-friendly interface. The project is built with React and Vite on the frontend and Node.js/Express on the backend.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix client\" \"npm start --prefix api\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zabi-23/HomeIQ-1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Zabi-23/HomeIQ-1/issues"
+  },
+  "homepage": "https://github.com/Zabi-23/HomeIQ-1#readme",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

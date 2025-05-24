@@ -88,13 +88,13 @@ POST /api/listings/
 ## 📸 Example Screenshots
 
 ### Login Page
-![Login](./public/Inloggningssida.png)
+![Login](./client/public/Inloggningssida.png)
 
 ### Listing Form
-![Create Listing](./public/Annonsformulär.png)
+![Create Listing](./client/public/Annonsformulär.png)
 
 ### Results Page
-![Results](./public/Resultatsida.png)
+![Results](./client/public/Resultatsida.png)
 
 
 
