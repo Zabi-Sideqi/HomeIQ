@@ -75,6 +75,13 @@ const SignIn = () => {
         </button>
         <OAuth/>
       </form>
+      <p className="text-center mt-2">
+       Forgot your password?{' '}
+        <Link to="/forgot-password" className="text-blue-600 hover:underline">
+        Reset it here
+       </Link>
+      </p>
+
 
       {error && <p className="text-red-500 text-center mt-2">{error}</p>}
 

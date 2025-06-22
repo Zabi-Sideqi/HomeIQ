@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import User from '../models/user.model.js';
 import { errorHandler } from '../utils/error.js';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 
 export const signup = async (req, res, next) => {
   try {
@@ -133,5 +134,63 @@ export const signOut = async (req, res) => {
     return res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
     return res.status(500).json({ message: "Error logging out" });
+  }
+};
+
+//create forgot password funtion
+
+export const requestPasswordReset = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if(!user) return next(errorHandler(404, "User not found"));
+
+    const token = jwt.sign({id: user._id}, process.env.JWT_SECRET, { expiresIn: '30m' });
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+
+    // Here you would send the reset link via email
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+    
+    await transport.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Password Reset Request',
+      html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
+    });
+    res.status(200).json({ message: "Password reset link sent to your email" });
+  } catch (error) {
+    console.error("Error in requestPasswordReset:", error);
+    next(errorHandler(500, "Error processing password reset request"));
+  }
+
+    
+}; 
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword || newPassword.length < 8) {
+      return next(errorHandler(400, "Invalid request"));
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    
+    if (!user) return next(errorHandler(404, "User not found"));
+
+    user.password = await bcrypt.hash(newPassword, 8);
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Error in resetPassword:", error);
+    next(errorHandler(500, "Error resetting password"));
   }
 };

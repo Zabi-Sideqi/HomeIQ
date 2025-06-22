@@ -12,6 +12,8 @@ import UpdateListing from './pages/UpdateListing';
 import Listing from './pages/Listing';
 import Search from './pages/Search';
 import Favorites from './pages/Favorites';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 
 
@@ -26,6 +28,8 @@ const App = () => {
         <Route path="/about" element={<About />} />
         <Route path="/search" element={<Search />} />
         <Route path="/listing/:listingId" element={<Listing />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route element ={<PrivateRoute/>} >
          <Route path="/profile" element={<Profile/>} />
          <Route path="/create-listing" element={<CreateListing/>} />
