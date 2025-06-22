@@ -1,9 +1,11 @@
+//client/src/pages/Listing.jsx
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import SwiperCore from 'swiper';
 import { useSelector } from 'react-redux';
 import { Navigation } from 'swiper/modules';
+import PropertyMap from '../components/PropertyMap';
 import 'swiper/css/bundle';
 import {
   FaBath,
@@ -114,6 +116,9 @@ export default function Listing() {
               <span className='font-semibold text-black'>Description - </span>
               {listing.description}
             </p>
+
+            {/* Google Map med platsen */}
+            <PropertyMap address={listing.address} />
             <ul className='text-green-900 font-semibold text-sm flex flex-wrap items-center gap-4 sm:gap-6'>
               <li className='flex items-center gap-1 whitespace-nowrap '>
                 <FaBed className='text-lg' />
