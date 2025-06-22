@@ -11,6 +11,7 @@ import CreateListing from './pages/CreateListing';
 import UpdateListing from './pages/UpdateListing';
 import Listing from './pages/Listing';
 import Search from './pages/Search';
+import Favorites from './pages/Favorites';
 
 
 
@@ -29,6 +30,7 @@ const App = () => {
          <Route path="/profile" element={<Profile/>} />
          <Route path="/create-listing" element={<CreateListing/>} />
          <Route path="/update-listing/:listingId" element={<UpdateListing/>} />
+          <Route path="/favorites" element={<Favorites/>} />
         </Route>
       </Routes>
     </BrowserRouter>

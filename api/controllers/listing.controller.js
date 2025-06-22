@@ -3,6 +3,7 @@
 
 import Listing from "../models/listing.model.js";
 import { errorHandler } from '../utils/error.js';
+import User from "../models/user.model.js";
 
 export const createListing = async (req, res, next) => {
 
@@ -160,3 +161,38 @@ export const getListings = async (req, res, next) => {
     }
 }
 
+export const getListingsByIds = async (req, res, next) => {
+    try {
+        const { ids } = req.body; // Expecting an array of IDs in the request body
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: "Invalid or empty IDs array" });
+        }
+
+        const listings = await Listing.find({ _id: { $in: ids } });
+
+        if (listings.length === 0) {
+            return res.status(404).json({ message: "No listings found for the provided IDs" });
+        }
+
+        return res.status(200).json(listings);
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const getFavoritesListings = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user || !user.favorites || user.favorites.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    const listings = await Listing.find({ _id: { $in: user.favorites } });
+
+    res.status(200).json(listings);
+  } catch (error) {
+    next(error);
+  }
+};

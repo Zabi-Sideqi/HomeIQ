@@ -73,6 +73,12 @@ const userSlice = createSlice({
       state.loading = false
       state.error = action.payload
     },
+    setUser: (state, action) => {
+    state.currentUser = action.payload;
+    state.token = action.payload.token;
+    state.isLoggedIn = true;
+ }
+
 
   },
 })
@@ -80,7 +86,7 @@ const userSlice = createSlice({
 export const { signInStart, signInSuccess, signInFailure, logout,
    updateUserFailure, updateUserStart, updateUserSuccess, deleteUserFailure,
   deleteUserStart, deleteUserSuccess ,
-  signOutUserStart, signOutUserSuccess, signOutUserFailure
+  signOutUserStart, signOutUserSuccess, signOutUserFailure, setUser
  } = userSlice.actions
  
 export default userSlice.reducer

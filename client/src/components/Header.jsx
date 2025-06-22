@@ -68,6 +68,12 @@ export const Header = () => {
         <ul className="hidden sm:flex items-center gap-4">
           <Link to="/"><li className="text-slate-700 hover:underline">Home</li></Link>
           <Link to="/about"><li className="text-slate-700 hover:underline">About</li></Link>
+          {currentUser && (
+          <Link to="/favorites">
+          <li className="text-slate-700 hover:underline">Favorites</li>
+          </Link>
+ )}
+
           <Link to="/profile">
             {currentUser ? (
               <img src={currentUser.avatar} alt="profile" className="w-8 h-8 rounded-full object-cover" />
@@ -124,6 +130,11 @@ export const Header = () => {
         <Link to="/about" onClick={() => setMenuOpen(false)} className="block py-2 text-slate-700 hover:underline">
           About
         </Link>
+         {currentUser && (
+          <Link to="/favorites" onClick={() => setMenuOpen(false)} className="block py-2 text-slate-700 hover:underline">
+            Favorites
+          </Link>
+        )}
         {!currentUser && (
           <Link to="/profile" onClick={() => setMenuOpen(false)} className="block py-2 text-slate-700 hover:underline">
             Sign In

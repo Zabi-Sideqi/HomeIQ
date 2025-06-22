@@ -112,20 +112,43 @@ export const getUserListing = async (req, res, next) => {
   }; */
   // Must work on token and user ID check for security
 
-  export const getUser = async (req, res, next) => {
-    try {
-      
-      const user = await User.findById(req.params.id);
-    
-      if (!user) return next(errorHandler(404, 'User not found!'));
-    
-      const { password: pass, ...rest } = user._doc;
-    
-      res.status(200).json(rest);
-    } catch (error) {
-      next(error);
+export const getUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).populate('favorites'); 
+    if (!user) return next(errorHandler(404, 'User not found!'));
+
+    const { password, ...rest } = user._doc;
+
+    res.status(200).json(rest);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+// create favoriteToggle function
+
+export const favoriteToggle = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "Användare hittades inte" });
+
+    const listingId = req.params.listingId.toString();
+
+    const index = user.favorites.findIndex((id) => id.toString() === listingId);
+
+    if (index !== -1) {
+      user.favorites.splice(index, 1);
+    } else {
+      user.favorites.push(listingId);
     }
-  };
+
+    await user.save();
+    res.status(200).json({ favorites: user.favorites });
+  } catch (error) {
+    next(error);
+  }
+};
 
 
 

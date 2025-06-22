@@ -110,7 +110,7 @@ export const google = async (req, res, next) => {
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET);
     const { password: pass, ...rest } = newUser._doc;
 
-    // ✅ RETURNERA TOKEN & USER till frontend även för nya användare!
+    //  RETURNERA TOKEN & USER till frontend även för nya användare!
     return res
       .cookie("access_token", token, { httpOnly: true })
       .status(200)
