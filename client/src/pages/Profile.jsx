@@ -442,7 +442,7 @@ const Profile = () => {
         }, 9000);
       }
     );
-  }, [formData.avatar, currentUser._id, dispatch, token]);
+  }, [formData.avatar, currentUser._id, dispatch, token, API_BASE]);
 
   useEffect(() => {
     if (file) {
