@@ -19,10 +19,11 @@ mongoose.connect(process.env.Mongo)
 
   
 // Middleware
-    app.use(cors({
-  origin: 'http://localhost:5173',    // Ersätt med din frontend-URL
+app.use(cors({
+  origin: [process.env.FRONTEND_URL, process.env.FRONTEND_URL_LOCAL],
   credentials: true,
-})); 
+}));
+
 
 
 
