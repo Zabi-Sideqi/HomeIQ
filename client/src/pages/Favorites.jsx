@@ -1,6 +1,5 @@
 //client/src/pages/Favorites.jsx
 
-// client/src/pages/Favorites.jsx
 
 import { useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';

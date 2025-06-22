@@ -1,6 +1,5 @@
 //client/src/pages/CreateListing.jsx
 
-
 import React, { useState } from 'react';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { app } from '../firebase';
