@@ -29,12 +29,18 @@ export default function Listing() {
   const [contact, setContact] = useState(false);
   const params = useParams();
   const { currentUser } = useSelector((state) => state.user);
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;  // Base URL for API
+
 
   useEffect(() => {
     const fetchListing = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/listing/get/${params.listingId}`);
+        const res = await fetch(`${API_BASE}/api/listing/get/${params.listingId}`);
+        if (!res.ok) {
+          throw new Error('Failed to fetch listing');
+        }
+
         const data = await res.json();
         if (data.success === false) {
           setError(true);
@@ -50,7 +56,7 @@ export default function Listing() {
       }
     };
     fetchListing();
-  }, [params.listingId]);
+  }, [params.listingId, API_BASE]);
 
   return (
     <main>
