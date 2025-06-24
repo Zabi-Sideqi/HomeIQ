@@ -19,10 +19,23 @@ mongoose.connect(process.env.Mongo)
 
   
 // Middleware
+// Hardcode URLs instead of relying on .env right here
+const allowedOrigins = [
+  'https://homeiq-client.onrender.com',
+  'http://localhost:5173'
+];
+
 app.use(cors({
-  origin: [process.env.FRONTEND_URL, process.env.FRONTEND_URL_LOCAL],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
+
 
 
 
