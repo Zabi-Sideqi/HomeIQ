@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ListingItem from '../components/ListingItem';
+import { apiUrl } from '../utils/api';
+
 
 export default function Search() {
   const navigate = useNavigate();
@@ -54,7 +56,7 @@ export default function Search() {
     const fetchListings = async () => {
       setLoading(true);
       const searchQuery = urlParms.toString();
-      const res = await fetch(`/api/listing/get?${searchQuery}`);
+      const res = await fetch(apiUrl(`/api/listing/get?${searchQuery}`));
       const data = await res.json();
       setShowMore(data.length > 8);
       setListings(data);
@@ -105,7 +107,9 @@ export default function Search() {
     urlParams.set('startIndex', startIndex);
     urlParams.set('limit', 9);
     const searchQuery = urlParams.toString();
-    const res = await fetch(`/api/listing/get?${searchQuery}`);
+    const res = await fetch(apiUrl(`/api/listing/get?${searchQuery}`), {
+      credentials: 'include',
+    });
     const data = await res.json();
     if (data.length < 9) {
       setShowMore(false);

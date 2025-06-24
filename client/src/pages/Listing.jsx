@@ -6,6 +6,7 @@ import SwiperCore from 'swiper';
 import { useSelector } from 'react-redux';
 import { Navigation } from 'swiper/modules';
 import PropertyMap from '../components/PropertyMap';
+import { apiUrl } from '../utils/api';
 import 'swiper/css/bundle';
 import {
   FaBath,
@@ -36,7 +37,7 @@ export default function Listing() {
     const fetchListing = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/api/listing/get/${params.listingId}`);
+        const res = await fetch(apiUrl(`/api/listing/get/${params.listingId}`));
         if (!res.ok) {
           throw new Error('Failed to fetch listing');
         }
