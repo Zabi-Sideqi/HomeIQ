@@ -8,19 +8,21 @@ import 'swiper/swiper-bundle.css';
 import 'swiper/css/bundle';
 import ListingItem from '../components/ListingItem';
 import { useTranslation } from 'react-i18next';
+import { apiUrl } from '../utils/api';
 
 export default function Home() {
   const [offerListings, setOfferListings] = useState([]);
   const [saleListings, setSaleListings] = useState([]);
   const [rentListings, setRentListings] = useState([]);
   const { t } = useTranslation();
+  
 
   SwiperCore.use([Navigation]);
 
   useEffect(() => {
     const fetchOfferListings = async () => {
       try {
-        const res = await fetch('/api/listing/get?offer=true&limit=6');
+        const res = await fetch(apiUrl('/api/listing/get?offer=true&limit=6'));
         const data = await res.json();
         setOfferListings(data);
         fetchRentListings();

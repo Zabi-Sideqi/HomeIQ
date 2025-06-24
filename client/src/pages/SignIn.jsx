@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { signInStart, signInSuccess, signInFailure } from '../redux/user/userSlice';
 import { OAuth } from '../components/OAuth';
+import { apiUrl } from '../utils/api'; // Just an example, adjust the import path as needed
 
 const SignIn = () => {
   const [formData, setFormData] = useState({});
@@ -25,7 +26,7 @@ const SignIn = () => {
 
     try {
       dispatch(signInStart());
-      const res = await fetch('/api/auth/signin', {
+      const res = await fetch(apiUrl('/api/auth/signin'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

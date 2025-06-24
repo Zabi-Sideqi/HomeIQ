@@ -1,4 +1,4 @@
-//client/src/components/ListingItem.jsx
+
 // client/src/components/ListingItem.jsx
 
 import { Link } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { MdLocationOn } from 'react-icons/md';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
 import { updateUserSuccess } from '../redux/user/userSlice';
+import { apiUrl } from '../utils/api';
 
 export default function ListingItem({ listing, onFavoriteChange }) {
   const dispatch = useDispatch();
@@ -20,7 +21,7 @@ export default function ListingItem({ listing, onFavoriteChange }) {
     }
 
     try {
-      const res = await axios.put(`/api/user/favorites/${listing._id}`, {}, {
+      const res = await axios.put(apiUrl(`/api/user/favorites/${listing._id}`), {}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

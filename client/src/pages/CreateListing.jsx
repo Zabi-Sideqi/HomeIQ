@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useSelector } from 'react-redux';
+import { apiUrl } from '../utils/api';
 
 export default function CreateListing() {
   const { currentUser, token } = useSelector((state) => state.user); // ✅ token korrekt hämtad
@@ -109,7 +110,7 @@ export default function CreateListing() {
     try {
       setUploading(true);
       setImageUploadError(false);
-      const res = await fetch('/api/listing/create', {
+      const res = await fetch(apiUrl('/api/listing/create'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

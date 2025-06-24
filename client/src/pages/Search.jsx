@@ -1,3 +1,4 @@
+//client/src/pages/Search.jsx
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ListingItem from '../components/ListingItem';

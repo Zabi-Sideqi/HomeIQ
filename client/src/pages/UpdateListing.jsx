@@ -1,3 +1,4 @@
+//client/src/pages/UpdateListing.jsx
 import React, { useEffect, useState } from 'react';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app } from '../firebase';
@@ -5,6 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useSelector } from 'react-redux';
+import { apiUrl } from '../utils/api';
 
 export default function UpdateListing() {
   const { currentUser } = useSelector((state) => state.user);
@@ -31,7 +33,7 @@ export default function UpdateListing() {
 
   useEffect(() => {
     const fetchListing = async () => {
-      const res = await fetch(`/api/listing/get/${params.listingId}`);
+      const res = await fetch(apiUrl(`/api/listing/get/${params.listingId}`));
       const data = await res.json();
       if (data.success === false) {
         toast.error(data.message);
