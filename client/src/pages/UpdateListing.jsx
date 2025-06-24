@@ -33,7 +33,9 @@ export default function UpdateListing() {
 
   useEffect(() => {
     const fetchListing = async () => {
-      const res = await fetch(apiUrl(`/api/listing/get/${params.listingId}`));
+      const res = await fetch(apiUrl(`/api/listing/get/${params.listingId}`), {
+        credentials: 'include',
+      });
       const data = await res.json();
       if (data.success === false) {
         toast.error(data.message);
@@ -110,7 +112,8 @@ export default function UpdateListing() {
       setUploading(true);
 
       // 🟢 Uppdatera listing med nya data
-      const res = await fetch(`/api/listing/update/${params.listingId}`, {
+      const res = await fetch(apiUrl(`/api/listing/update/${params.listingId}`), {
+        credentials: 'include',
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, userRef: currentUser._id }),
@@ -123,7 +126,8 @@ export default function UpdateListing() {
 
       // 🟢 Skicka borttagna bilder till backend + radera från Firebase
       if (removedImages.length > 0) {
-        await fetch(`/api/listing/delete-images/${params.listingId}`, {
+        await fetch(apiUrl(`/api/listing/delete-images/${params.listingId}`), {
+          credentials: 'include',
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrls: removedImages }),

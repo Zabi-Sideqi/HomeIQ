@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { OAuth } from '../components/OAuth';
+import { apiUrl } from '../utils/api';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({});
@@ -23,7 +24,8 @@ const SignUp = () => {
     setError(null);
 
     try {
-      const res = await fetch('/api/auth/signup', {
+      const res = await fetch(apiUrl('/api/auth/signup'), {
+        credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
