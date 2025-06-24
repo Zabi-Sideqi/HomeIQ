@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import ListingItem from '../components/ListingItem';
+import { apiUrl } from '../utils/api';
 
 export default function Favorites() {
   const { token } = useSelector((state) => state.user);
@@ -12,10 +13,11 @@ export default function Favorites() {
 
   const fetchFavorites = async () => {
     try {
-      const res = await axios.get('/api/listing/favorites', {
+      const res = await axios.get(apiUrl('/api/listing/favorites'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        withCredentials: true, // För att skicka cookies
       });
       setFavoriteListings(res.data);
     } catch (error) {
