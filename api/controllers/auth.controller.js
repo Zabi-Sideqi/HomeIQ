@@ -196,7 +196,7 @@ export const resetPassword = async (req, res, next) => {
     
     if (!user) return next(errorHandler(404, "User not found"));
 
-    user.password = await bcrypt.hash(password, 8);
+    user.password = password;
     await user.save();
 
     res.status(200).json({ message: "Password reset successfully" });
