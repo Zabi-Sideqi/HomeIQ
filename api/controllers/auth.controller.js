@@ -143,12 +143,14 @@ export const requestPasswordReset = async (req, res, next) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-    if(!user) return next(errorHandler(404, "User not found"));
+    if (!user) return next(errorHandler(404, "User not found"));
 
-    const token = jwt.sign({id: user._id}, process.env.JWT_SECRET, { expiresIn: '30m' });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
-    // Here you would send the reset link via email
+    // ✅ Lägg till denna logg – den visar länken i Render-loggen
+    console.log("🔗 Reset link to send:", resetLink);
+
     const transport = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -156,21 +158,30 @@ export const requestPasswordReset = async (req, res, next) => {
         pass: process.env.EMAIL_PASS,
       },
     });
-    
-    await transport.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Password Reset Request',
-      html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
-    });
-    res.status(200).json({ message: "Password reset link sent to your email" });
+
+    // ✅ Flytta detta in i en egen try-catch så du ser fel direkt om e-posten inte går iväg
+    try {
+      await transport.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Password Reset Request',
+        html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
+      });
+
+      console.log("✅ Password reset email SENT to:", email);
+      res.status(200).json({ message: "Password reset link sent to your email" });
+
+    } catch (mailError) {
+      console.error("❌ Failed to send email:", mailError);
+      return next(errorHandler(500, "Could not send reset email"));
+    }
+
   } catch (error) {
     console.error("Error in requestPasswordReset:", error);
     next(errorHandler(500, "Error processing password reset request"));
   }
+};
 
-    
-}; 
 
 export const resetPassword = async (req, res, next) => {
   try {
