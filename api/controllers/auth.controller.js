@@ -174,9 +174,9 @@ export const requestPasswordReset = async (req, res, next) => {
 
 export const resetPassword = async (req, res, next) => {
   try {
-    const { token, Password } = req.body;
+    const { token, password } = req.body;
 
-    if (!token || !Password || Password.length < 8) {
+    if (!token || !password || password.length < 8) {
       return next(errorHandler(400, "Invalid request"));
     }
 
