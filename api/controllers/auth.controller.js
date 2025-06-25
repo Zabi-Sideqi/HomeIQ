@@ -146,7 +146,7 @@ export const requestPasswordReset = async (req, res, next) => {
     if(!user) return next(errorHandler(404, "User not found"));
 
     const token = jwt.sign({id: user._id}, process.env.JWT_SECRET, { expiresIn: '30m' });
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
     // Here you would send the reset link via email
     const transport = nodemailer.createTransport({
@@ -174,9 +174,9 @@ export const requestPasswordReset = async (req, res, next) => {
 
 export const resetPassword = async (req, res, next) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token, Password } = req.body;
 
-    if (!token || !newPassword || newPassword.length < 8) {
+    if (!token || !Password || Password.length < 8) {
       return next(errorHandler(400, "Invalid request"));
     }
 
@@ -185,7 +185,7 @@ export const resetPassword = async (req, res, next) => {
     
     if (!user) return next(errorHandler(404, "User not found"));
 
-    user.password = await bcrypt.hash(newPassword, 8);
+    user.password = await bcrypt.hash(Password, 8);
     await user.save();
 
     res.status(200).json({ message: "Password reset successfully" });
