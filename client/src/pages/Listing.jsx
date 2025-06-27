@@ -17,6 +17,7 @@ import {
   FaParking,
   FaShare,
 } from 'react-icons/fa'
+import { MdLocationOn } from 'react-icons/md'
 import Contact from '../components/Contact'
 
 // https://sabe.io/blog/javascript-format-numbers-commas#:~:text=The%20best%20way%20to%20format,format%20the%20number%20with%20commas.
@@ -56,6 +57,22 @@ export default function Listing() {
     }
     fetchListing()
   }, [params.listingId])
+
+  const openDirections = () => {
+    if (!listing?.address) return alert('Ingen adress tillgänglig.')
+    if (!navigator.geolocation)
+      return alert('Din webbläsare stöder inte platsdelning.')
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const origin = `${pos.coords.latitude},${pos.coords.longitude}`
+        const destination = encodeURIComponent(listing.address)
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`
+        window.open(url, '_blank')
+      },
+      () => alert('Kunde inte hämta din plats.')
+    )
+  }
 
   return (
     <main>
@@ -121,6 +138,19 @@ export default function Listing() {
               <span className='font-semibold text-black'>Description - </span>
               {listing.description}
             </p>
+
+            {/* Clickable Address Section */}
+            <div className='flex items-center gap-2 mb-4'>
+              <span className='font-semibold text-black'>Address - </span>
+              <button
+                onClick={openDirections}
+                className='flex items-center gap-1 hover:text-green-700 transition-colors cursor-pointer'
+                title='Get directions to this property'
+              >
+                <MdLocationOn className='h-5 w-5 text-green-500' />
+                <span className='text-slate-600'>{listing.address}</span>
+              </button>
+            </div>
 
             {/* Google Map med platsen */}
             <PropertyMap address={listing.address} />

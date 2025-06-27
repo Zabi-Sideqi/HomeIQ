@@ -90,17 +90,17 @@ export default function ListingItem({ listing, onFavoriteChange }) {
 
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
-            <MdLocationOn className='h-5 w-5 text-green-500' />
-            <span className='text-sm text-slate-500 truncate'>
-              {listing.address}
-            </span>
+            <button
+              onClick={openDirections}
+              className='flex items-center gap-1 hover:text-green-700 transition-colors cursor-pointer'
+              title='Get directions to this property'
+            >
+              <MdLocationOn className='h-5 w-5 text-green-500' />
+              <span className='text-sm text-slate-500 truncate'>
+                {listing.address}
+              </span>
+            </button>
           </div>
-          <button
-            onClick={openDirections}
-            className='text-blue-600 text-xs hover:underline'
-          >
-            Vägbeskrivning
-          </button>
         </div>
 
         <p className='text-sm text-gray-600 line-clamp-2'>
