@@ -30,13 +30,16 @@ const userSchema = new mongoose.Schema({
         enum: ["user", "admin"],
         default: "user",
     },
-}, { timestamps: true });
-
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
-    this.password = await bcrypt.hash(this.password, 8);
-    next();
-});
+    resetPasswordToken: {
+        type: String,
+        
+    },
+    resetPasswordExpires: {
+        type: Date,
+        
+    }
+}, { timestamps: true }
+);
 
 const User = mongoose.model("User", userSchema);
 export default User;

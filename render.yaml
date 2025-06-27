@@ -1,0 +1,19 @@
+# Render.com configuration file
+services:
+  # Backend API Service
+  - type: web
+    name: homeiq-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  # Frontend Client Service
+  - type: web
+    name: homeiq-client
+    runtime: static
+    plan: free
+    buildCommand: npm install && npm run build

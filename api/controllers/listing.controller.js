@@ -8,7 +8,7 @@ import User from "../models/user.model.js";
 export const createListing = async (req, res, next) => {
 
     try {
-        // Kontrollera om det redan finns en listing med samma address
+        // check if the listing already exists with the same address
         const existingListing = await Listing.findOne({address: req.body.address});
         if (existingListing) {
             return res.status(400).json({
@@ -16,7 +16,7 @@ export const createListing = async (req, res, next) => {
                  message: "A listing with this address already exists.",
                  });
         }
-        // Skapa en ny listing
+        // create a new listing
         const listing = await Listing.create(req.body);
         return res.status(201).json(listing)
 
@@ -33,7 +33,7 @@ export const deleteListing = async (req, res, next) => {
       return next(errorHandler(404, "Listing not found"));
     }
 
-    // ✅ Kontrollera att det är ägaren som försöker ta bort
+    // ✅ Check if the user is the owner of the listing
     if (req.user.id !== listing.userRef.toString()) {
       return next(errorHandler(401, "You can only delete your own listings"));
     }

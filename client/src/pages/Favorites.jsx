@@ -1,44 +1,45 @@
 //client/src/pages/Favorites.jsx
 
-
-import { useSelector } from 'react-redux';
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import ListingItem from '../components/ListingItem';
-import { apiUrl } from '../utils/api';
+import { useSelector } from 'react-redux'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+import ListingItem from '../components/ListingItem'
 
 export default function Favorites() {
-  const { token } = useSelector((state) => state.user);
-  const [favoriteListings, setFavoriteListings] = useState([]);
+  const { token } = useSelector((state) => state.user)
+  const [favoriteListings, setFavoriteListings] = useState([])
 
   const fetchFavorites = async () => {
     try {
-      const res = await axios.get(apiUrl('/api/listing/favorites'), {
+      // Use Vite proxy instead of direct API URL
+      const res = await axios.get('/api/listing/favorites', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        withCredentials: true, // För att skicka cookies
-      });
-      setFavoriteListings(res.data);
+      })
+      setFavoriteListings(res.data)
     } catch (error) {
-      console.error('Kunde inte hämta favoriter:', error);
+      console.error(
+        'Kunde inte hämta favoriter:',
+        error.response?.data || error.message
+      )
     }
-  };
+  }
 
   useEffect(() => {
     const fetchFavoritesEffect = async () => {
       if (token) {
-        await fetchFavorites();
+        await fetchFavorites()
       }
-    };
-    fetchFavoritesEffect();
+    }
+    fetchFavoritesEffect()
     // eslint-disable-next-line
-  }, [token]);
+  }, [token])
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">My Favorites</h1>
-      <div className="flex flex-wrap gap-4">
+    <div className='p-4'>
+      <h1 className='text-2xl font-bold mb-4'>My Favorites</h1>
+      <div className='flex flex-wrap gap-4'>
         {favoriteListings.length === 0 ? (
           <p>You have no favorites yet.</p>
         ) : (
@@ -53,5 +54,5 @@ export default function Favorites() {
         )}
       </div>
     </div>
-  );
+  )
 }

@@ -29,7 +29,7 @@ const App = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/listing/:listingId" element={<Listing />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route element ={<PrivateRoute/>} >
          <Route path="/profile" element={<Profile/>} />
          <Route path="/create-listing" element={<CreateListing/>} />

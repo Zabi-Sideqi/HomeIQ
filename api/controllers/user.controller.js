@@ -12,20 +12,20 @@ export const test = (req, res) => {
     res.send('User test route is working!');
 }
 
-// ✅ Perfekt säker och optimerad updateUser
+// Perfectly secure and optimized updateUser
 export const updateUser = async (req, res, next) => {
   try {
-    // 1. Kolla om användaren försöker uppdatera sig själv
+    // 1. check if the user is trying to update their own account
     if (req.user.id !== req.params.id) {
       return next(errorHandler(403, "You can only update your own account!"));
     }
 
-    // 2. Hantera lösenord separat om det skickas
+    // 2. Manage passwords separately if sent
     if (req.body.password) {
       req.body.password = bcrypt.hashSync(req.body.password, 10);
     }
 
-    // 3. Begränsa vilka fält som får uppdateras (säkerhet!)
+    // 3. Limit which fields can be updated (security!)
     const allowedFields = ['username', 'email', 'password', 'avatar'];
     const fieldsToUpdate = {};
 
@@ -35,7 +35,7 @@ export const updateUser = async (req, res, next) => {
       }
     });
 
-    // 4. Uppdatera användaren i databasen
+    // 4. Update the user in the database
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       { $set: fieldsToUpdate },
@@ -46,7 +46,7 @@ export const updateUser = async (req, res, next) => {
       return next(errorHandler(404, "User not found"));
     }
 
-    // 5. Skicka tillbaka användardata utan lösenord
+    // 5. Send back user data without password
     const { password, ...rest } = updatedUser._doc;
     res.status(200).json({
       success: true,

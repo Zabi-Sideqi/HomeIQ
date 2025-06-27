@@ -60,7 +60,7 @@ const listingSchema = new mongoose.Schema(
         },
 
 
-    }, { timestamps: true } // Skapar createdAt och updatedAt fält automatiskt
+    }, { timestamps: true } // Automatically creates createdAt and updatedAt fields
 )
 
 const Listing = mongoose.model("Listing", listingSchema)

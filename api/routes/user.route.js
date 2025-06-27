@@ -11,7 +11,7 @@ router.get('/test', test);
 router.put('/update/:id', verifyToken, updateUser)
 router.delete('/delete/:id', verifyToken, deleteUser)
 router.get('/listing/:id', verifyToken, getUserListing)
-router.put('/favorites/:listingId', verifyToken, favoriteToggle);
 router.get('/:id', verifyToken, getUser)
+router.put('/favorites/:listingId', verifyToken, favoriteToggle);
 export default router;
 

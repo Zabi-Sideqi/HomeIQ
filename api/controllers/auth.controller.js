@@ -1,207 +1,283 @@
 //api/controllers/auth.controller.js
 
-import bcrypt from 'bcryptjs';
-import User from '../models/user.model.js';
-import { errorHandler } from '../utils/error.js';
-import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
+import bcrypt from 'bcryptjs'
+import User from '../models/user.model.js'
+import { errorHandler } from '../utils/error.js'
+import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
+import sendEmail from '../utils/sendEmail.js'
 
 export const signup = async (req, res, next) => {
   try {
-    const { email, password, username } = req.body;
+    const { email, password, username } = req.body
 
+    // Validate password length
     if (!password || password.length < 8) {
-      return next(errorHandler(400, "Password must be at least 8 characters long"));
+      return next(
+        errorHandler(400, 'Password must be at least 8 characters long')
+      )
     }
-
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email })
     if (existingUser) {
-      return next(errorHandler(409, "User already exists"));
+      return next(errorHandler(409, 'User already exists'))
     }
 
-    const hashedPassword = await bcrypt.hash(password, 8);
+    const hashedPassword = await bcrypt.hash(password, 8)
 
+    // Create new user
     const newUser = new User({
       email,
       password: hashedPassword,
-      username: username || "anonymous",
-      avatar: "https://www.gravatar.com/avatar/?d=mp&f=y"
-    });
+      username: username || 'anonymous',
+      avatar: 'https://www.gravatar.com/avatar/?d=mp&f=y',
+    })
 
-    await newUser.save();
+    await newUser.save()
 
-    res.status(201).json({ message: "User created successfully" });
-
+    res.status(201).json({ message: 'User created successfully' })
   } catch (error) {
-    console.error(" error:", error);
-    next(errorHandler(500, "error from the function"));
+    console.error(' error:', error)
+    next(errorHandler(500, 'error from the function'))
   }
-};
+}
 
+// Signin function
 export const signin = async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body
   try {
-    const validUser = await User.findOne({ email });
-    if (!validUser) return next(errorHandler(404, "User not found"));
+    const validUser = await User.findOne({ email })
+    if (!validUser) return next(errorHandler(404, 'User not found'))
 
-    const validPassword = bcrypt.compareSync(password, validUser.password);
-    if (!validPassword) return next(errorHandler(401, "Invalid password"));
+    const validPassword = bcrypt.compareSync(password, validUser.password)
+    if (!validPassword) return next(errorHandler(401, 'Invalid password'))
 
-    const token = jwt.sign({ id: validUser._id }, process.env.JWT_SECRET);
-    const { password: pass, ...rest } = validUser._doc;
+    const token = jwt.sign({ id: validUser._id }, process.env.JWT_SECRET)
+    const { password: pass, ...rest } = validUser._doc
 
-    res
-      .cookie("access_token", token, { httpOnly: true })
-      .status(200)
-      .json({
-        success: true,
-        token,
-        user: rest,
-      });
-
+    res.cookie('access_token', token, { httpOnly: true }).status(200).json({
+      success: true,
+      token,
+      user: rest,
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
 
+// Google authentication function
 export const google = async (req, res, next) => {
   try {
-    console.log("Incoming Google data:", req.body);
+    console.log('Incoming Google data:', req.body)
 
-    const { email, name, photoURL } = req.body;
+    const { email, name, photoURL } = req.body
 
+    // ensure email is provided
     if (!email) {
-      return next(errorHandler(400, "Email is required"));
+      return next(errorHandler(400, 'Email is required'))
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email })
 
-    // ✅ OM användaren redan finns, generera token och skicka till frontend
+    // IF the user already exists, generate token and send to frontend
     if (existingUser) {
-      const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET);
-      const { password: pass, ...rest } = existingUser._doc;
+      const token = jwt.sign({ id: existingUser._id }, process.env.JWT_SECRET)
+      const { password: pass, ...rest } = existingUser._doc
 
       return res
-        .cookie("access_token", token, { httpOnly: true })
+        .cookie('access_token', token, { httpOnly: true })
         .status(200)
         .json({
           success: true,
-          token,       // ✅ viktigt att frontend får denna
-          user: rest,  // ✅ viktigt att frontend får denna
-        });
+          token, // important that frontend gets this
+          user: rest, // important that frontend gets this
+        })
     }
 
-    // OM användaren är ny – skapa ny användare
+    // IF the user does not exist, create a new user
     const usernameFromName = name
-      ? name.split(" ").join("").toLowerCase()
-      : "user" + Math.random().toString(36).slice(-4);
+      ? name.split(' ').join('').toLowerCase()
+      : 'user' + Math.random().toString(36).slice(-4)
 
-    const generatedPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(generatedPassword, 8);
+    const generatedPassword =
+      Math.random().toString(36).slice(-8) +
+      Math.random().toString(36).slice(-8)
+    const hashedPassword = await bcrypt.hash(generatedPassword, 8)
 
     const newUser = new User({
       username: usernameFromName + Math.random().toString(36).slice(-4),
       email,
       password: hashedPassword,
-      avatar: photoURL || "https://www.gravatar.com/avatar/?d=mp&f=y",
-    });
+      avatar: photoURL || 'https://www.gravatar.com/avatar/?d=mp&f=y',
+    })
 
-    await newUser.save();
+    await newUser.save()
 
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET);
-    const { password: pass, ...rest } = newUser._doc;
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET)
+    const { password: pass, ...rest } = newUser._doc
 
     //  RETURNERA TOKEN & USER till frontend även för nya användare!
     return res
-      .cookie("access_token", token, { httpOnly: true })
+      .cookie('access_token', token, { httpOnly: true })
       .status(200)
       .json({
         success: true,
-        token,       // ✅ frontend behöver detta för Redux
-        user: rest,  // ✅ frontend behöver detta för Redux
-      });
-
+        token, // ✅ frontend behöver detta för Redux
+        user: rest, // ✅ frontend behöver detta för Redux
+      })
   } catch (error) {
-    console.error("Google auth error:", error);
-    next(errorHandler(500, error.message || "Unknown error in Google auth"));
+    console.error('Google auth error:', error)
+    next(errorHandler(500, error.message || 'Unknown error in Google auth'))
   }
-};
+}
 
-
+// Sign out function
 export const signOut = async (req, res) => {
   try {
-    res.clearCookie("access_token", { path: "/" });
-    return res.status(200).json({ message: "User logged out successfully" });
+    res.clearCookie('access_token', { path: '/' })
+    return res.status(200).json({ message: 'User logged out successfully' })
   } catch (error) {
-    return res.status(500).json({ message: "Error logging out" });
+    return res.status(500).json({ message: 'Error logging out' })
   }
-};
+}
 
 //create forgot password funtion
 
-export const requestPasswordReset = async (req, res, next) => {
+export const forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return next(errorHandler(404, "User not found"));
+    const { email } = req.body
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30m' });
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-
-    // ✅ Lägg till denna logg – den visar länken i Render-loggen
-    console.log("🔗 Reset link to send:", resetLink);
-
-    const transport = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    // ✅ Flytta detta in i en egen try-catch så du ser fel direkt om e-posten inte går iväg
-    try {
-      await transport.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Password Reset Request',
-        html: `<p>Click <a href="${resetLink}">here</a> to reset your password.</p>`,
-      });
-
-      console.log("✅ Password reset email SENT to:", email);
-      res.status(200).json({ message: "Password reset link sent to your email" });
-
-    } catch (mailError) {
-      console.error("❌ Failed to send email:", mailError);
-      return next(errorHandler(500, "Could not send reset email"));
+    if (!email) {
+      return next(errorHandler(400, 'Email is required'))
     }
 
-  } catch (error) {
-    console.error("Error in requestPasswordReset:", error);
-    next(errorHandler(500, "Error processing password reset request"));
-  }
-};
+    const user = await User.findOne({ email })
+    if (!user) {
+      return next(errorHandler(404, 'User not found'))
+    }
+    // Generate reset token
+    const resetToken = crypto.randomBytes(20).toString('hex')
 
+    // Hash the reset token to store securely in the database (resetPasswordToken field)
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex')
+
+    // set token and expiation (15 minutes)
+    user.resetPasswordToken = hashedToken
+    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000 // 15 minutes
+
+    await user.save()
+
+    // Create reset URL using the original (unhashed) token
+    const frontendUrl =
+      process.env.FRONTEND_URL_LOCAL ||
+      process.env.FRONTEND_URL ||
+      'http://localhost:5173'
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`
+
+    // Send email with reset link
+    const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
+        <p>Hi ${user.username},</p>
+        <p>You requested a password reset for your HomeIQ account.</p>
+        <p>Click the button below to reset your password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
+        </div>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #007bff;">${resetUrl}</p>
+        <p><strong>This link will expire in 10 minutes.</strong></p>
+        <p>If you didn't request this reset, please ignore this email.</p>
+        <hr style="margin: 30px 0;">
+        <p style="color: #666; font-size: 12px;">HomeIQ Team</p>
+      </div>
+    `
+
+    // try to send email, but don't fail if it dosn't work
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'HomeIQ Password Reset',
+        html: emailHtml,
+      })
+
+      console.log('Email sent successfully to:', user.email)
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError.message)
+      // Don't fail the request if email sending fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message:
+        'Password reset email sent successfully. Please check your inbox.',
+    })
+  } catch (error) {
+    console.error('Forgot password error:', error)
+
+    // Clear the reset token if email sending fails
+    if (req.body.email) {
+      const user = await User.findOne({ email: req.body.email })
+      if (user) {
+        user.resetPasswordToken = undefined
+        user.resetPasswordExpire = undefined
+        await user.save()
+      }
+    }
+
+    next(errorHandler(500, 'Email could not be sent'))
+  }
+}
+
+// Reset password function
 
 export const resetPassword = async (req, res, next) => {
   try {
-    const { token, password } = req.body;
+    const { token } = req.params
+    const { password } = req.body
 
-    if (!token || !password || password.length < 8) {
-      return next(errorHandler(400, "Invalid request"));
+    if (!password) {
+      return next(errorHandler(400, 'Password is required'))
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
-    
-    if (!user) return next(errorHandler(404, "User not found"));
+    if (password.length < 8) {
+      return next(
+        errorHandler(400, 'Password must be at least 8 characters long')
+      )
+    }
+    // Hash the token from params
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
 
-    user.password = password;
-    await user.save();
+    // Find user with the hashed token and check if token is not expired
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }, // Check if token is not expired
+    })
 
-    res.status(200).json({ message: "Password reset successfully" });
+    if (!user) {
+      return next(errorHandler(400, 'Invalid or expired reset token'))
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 8)
+
+    // Update user's password and clear reset token fields
+    user.password = hashedPassword
+    user.resetPasswordToken = undefined
+    user.resetPasswordExpires = undefined
+
+    await user.save()
+
+    res.status(200).json({
+      success: true,
+      message:
+        'Password has been reset successfully. You can now log in with your new password.',
+    })
   } catch (error) {
-    console.error("Error in resetPassword:", error);
-    next(errorHandler(500, "Error resetting password"));
+    console.error('Reset password error:', error)
+    next(errorHandler(500, 'Error resetting password'))
   }
-};
+}
