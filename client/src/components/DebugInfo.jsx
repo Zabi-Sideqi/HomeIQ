@@ -3,6 +3,9 @@ import { apiUrl } from '../utils/api'
 
 export const DebugInfo = () => {
   const isDev = import.meta.env.DEV
+
+  if (!isDev) return null // 🔒 Dölj i produktion
+
   const apiBase = import.meta.env.VITE_API_BASE_URL
 
   return (
@@ -33,3 +36,4 @@ export const DebugInfo = () => {
 }
 
 export default DebugInfo
+
