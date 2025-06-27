@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { apiUrl } from '../utils/api'
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('')
@@ -43,7 +44,7 @@ export default function ResetPassword() {
     setMessage('')
 
     try {
-      const res = await fetch(`/api/auth/reset-password/${token}`, {
+      const res = await fetch(apiUrl(`/api/auth/reset-password/${token}`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

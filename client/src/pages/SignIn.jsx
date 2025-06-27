@@ -1,5 +1,3 @@
-//client/src/pages/SignUp.jsx
-//client/src/pages/SignUp.jsx
 // client/src/pages/SignIn.jsx
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -10,6 +8,9 @@ import {
   signInFailure,
 } from '../redux/user/userSlice'
 import { OAuth } from '../components/OAuth'
+import { apiUrl } from '../utils/api'
+import { handleApiError, logApiCall } from '../utils/errorHandler'
+import DebugInfo from '../components/DebugInfo'
 
 const SignIn = () => {
   const [formData, setFormData] = useState({})
@@ -29,15 +30,21 @@ const SignIn = () => {
 
     try {
       dispatch(signInStart())
-      const res = await fetch('/api/auth/signin', {
+
+      const url = apiUrl('/api/auth/signin')
+      const options = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
-      })
+      }
 
-      const data = await res.json()
+      // Log the API call for debugging
+      logApiCall(url, options)
+
+      const res = await fetch(url, options)
+      const data = await handleApiError(res, 'SignIn')
 
       if (data.success === false) {
         dispatch(signInFailure(data.message))
@@ -45,15 +52,16 @@ const SignIn = () => {
       }
 
       dispatch(signInSuccess({ user: data.user, token: data.token }))
-      navigate('/dashboard') // eller till någon annan sida
+      navigate('/') // Navigate to home page after successful login
     } catch (err) {
-      console.error(err)
-      dispatch(signInFailure(error.message))
+      console.error('Login error:', err)
+      dispatch(signInFailure(err.message || 'Failed to connect to server'))
     }
   }
 
   return (
     <div className='p-3 max-w-lg mx-auto'>
+      <DebugInfo />
       <h1 className='text-3xl text-center font-semibold my-7'>Sign-In</h1>
       <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
         <input
