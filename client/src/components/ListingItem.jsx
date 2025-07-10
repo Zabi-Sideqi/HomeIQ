@@ -28,6 +28,7 @@ export default function ListingItem({ listing, onFavoriteChange }) {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
         }
       )
