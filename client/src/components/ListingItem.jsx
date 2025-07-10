@@ -24,7 +24,7 @@ export default function ListingItem({ listing, onFavoriteChange }) {
       // Use Vite proxy for local development instead of direct API URL
       await axios.put(
         `/api/user/favorites/${listing._id}`,
-        {},
+        null,
         {
           headers: {
             Authorization: `Bearer ${token}`,
