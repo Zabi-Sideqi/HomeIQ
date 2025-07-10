@@ -22,34 +22,49 @@ export default function Favorites() {
 
       try {
         setLoading(true)
+        console.log('Fetching favorites for user:', currentUser._id) // Debug log
 
         // 1️⃣ Get user's favorite IDs
-        const userRes = await axios.get(apiUrl(`/api/user/${currentUser._id}`), {
+        const userApiUrl = apiUrl(`/api/user/${currentUser._id}`)
+        console.log('User API URL:', userApiUrl) // Debug log
+        
+        const userRes = await axios.get(userApiUrl, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         })
 
+        console.log('User response:', userRes.data) // Debug log
         const favoriteIds = userRes.data?.favorites || []
+        console.log('Favorite IDs:', favoriteIds) // Debug log
 
         // 2️⃣ Get listings for those favorite IDs
         if (favoriteIds.length > 0) {
+          const listingsApiUrl = apiUrl('/api/listing/favorites')
+          console.log('Listings API URL:', listingsApiUrl) // Debug log
+          
           const listingsRes = await axios.put(
-            apiUrl('/api/listing/favorites'),
+            listingsApiUrl,
             { ids: favoriteIds },
             {
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { 
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
               withCredentials: true,
             }
           )
 
+          console.log('Listings response:', listingsRes.data) // Debug log
           setFavoriteListings(listingsRes.data)
         } else {
+          console.log('No favorite IDs found') // Debug log
           setFavoriteListings([])
         }
 
         setError(null)
       } catch (err) {
         console.error('Favorites fetch error:', err)
+        console.error('Error response:', err.response?.data) // Debug log
         setError('Could not load favorites. Please try again.')
         setFavoriteListings([])
       } finally {
