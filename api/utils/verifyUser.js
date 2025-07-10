@@ -1,6 +1,6 @@
 //api/utils/verifyUser.js
-// api/utils/verifyToken.js
-import jwt from 'jsonwebtoken';
+
+/* import jwt from 'jsonwebtoken';
 import { errorHandler } from './error.js';
 
 export const verifyToken = (req, res, next) => {
@@ -26,6 +26,37 @@ export const verifyToken = (req, res, next) => {
     }
 
     // Attach decoded user info to the request object
+    req.user = user;
+    next();
+  });
+};
+ */
+import jwt from 'jsonwebtoken';
+import { errorHandler } from './error.js';
+export const verifyToken = (req, res, next) => {
+  // Prioritera Authorization header först
+  let token;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7); // Strip "Bearer "
+  }
+
+  // Om ingen Authorization-header → prova cookie
+  if (!token) {
+    token = req.cookies?.access_token;
+  }
+
+  // Ingen token alls
+  if (!token) return next(errorHandler(401, 'Unauthorized - No token provided'));
+
+  // Verifiera token
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      console.error('JWT verification error:', err);
+      return next(errorHandler(403, 'Forbidden - Invalid token'));
+    }
+
     req.user = user;
     next();
   });
