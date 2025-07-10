@@ -36,7 +36,7 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true)
-      
+
       if (allowedOrigins.includes(origin)) {
         callback(null, true)
       } else {
@@ -79,9 +79,9 @@ app.get('/api/health/db', async (req, res) => {
       0: 'disconnected',
       1: 'connected',
       2: 'connecting',
-      3: 'disconnecting'
+      3: 'disconnecting',
     }
-    
+
     res.status(200).json({
       success: true,
       database: states[state],
