@@ -27,7 +27,7 @@ export default function Favorites() {
         // 1️⃣ Get user's favorite IDs
         const userApiUrl = apiUrl(`/api/user/${currentUser._id}`)
         console.log('User API URL:', userApiUrl) // Debug log
-        
+
         const userRes = await axios.get(userApiUrl, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
@@ -41,14 +41,14 @@ export default function Favorites() {
         if (favoriteIds.length > 0) {
           const listingsApiUrl = apiUrl('/api/listing/favorites')
           console.log('Listings API URL:', listingsApiUrl) // Debug log
-          
+
           const listingsRes = await axios.put(
             listingsApiUrl,
             { ids: favoriteIds },
             {
-              headers: { 
+              headers: {
                 Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
               },
               withCredentials: true,
             }
