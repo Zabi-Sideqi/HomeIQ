@@ -23,16 +23,12 @@ export default function ListingItem({ listing, onFavoriteChange }) {
       dispatch(updateUserFavorites(listing._id)) // lokal Redux-uppdatering först
 
       // Use apiUrl for proper API routing in both development and production
-      await axios.put(
-        apiUrl(`/api/user/favorites/${listing._id}`),
-        undefined,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      )
+      await axios.put(apiUrl(`/api/user/favorites/${listing._id}`), undefined, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
       if (onFavoriteChange) onFavoriteChange()
     } catch (err) {
