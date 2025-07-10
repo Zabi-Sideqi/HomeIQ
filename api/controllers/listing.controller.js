@@ -147,27 +147,64 @@ export const getListings = async (req, res, next) => {
       }
     }
 
+    // Handle bedroom filtering with min/max range
+    let bedroomFilter = {}
+    const minBedrooms =
+      req.query.minBedrooms !== undefined && req.query.minBedrooms !== ''
+        ? parseInt(req.query.minBedrooms)
+        : null
+    const maxBedrooms =
+      req.query.maxBedrooms !== undefined && req.query.maxBedrooms !== ''
+        ? parseInt(req.query.maxBedrooms)
+        : null
+
+    if (minBedrooms !== null || maxBedrooms !== null) {
+      if (minBedrooms !== null && maxBedrooms !== null) {
+        // Both min and max specified
+        bedroomFilter = { bedrooms: { $gte: minBedrooms, $lte: maxBedrooms } }
+      } else if (minBedrooms !== null) {
+        // Only min specified
+        bedroomFilter = { bedrooms: { $gte: minBedrooms } }
+      } else if (maxBedrooms !== null) {
+        // Only max specified
+        bedroomFilter = { bedrooms: { $lte: maxBedrooms } }
+      }
+    }
+
     const searchTerm = req.query.searchTerm || ''
     const sort = req.query.sort || 'createdAt'
     const order = req.query.order || 'desc'
 
+    // Build search conditions for searchTerm only
+    const searchConditions = []
+
+    if (searchTerm) {
+      searchConditions.push({
+        $or: [
+          { name: { $regex: searchTerm, $options: 'i' } },
+          { address: { $regex: searchTerm, $options: 'i' } },
+          { description: { $regex: searchTerm, $options: 'i' } },
+          { 'location.postcode': { $regex: searchTerm, $options: 'i' } },
+          { 'location.city': { $regex: searchTerm, $options: 'i' } },
+        ],
+      })
+    }
+
+    // If no search terms provided, match all
+    if (searchConditions.length === 0) {
+      searchConditions.push({}) // Match all documents
+    }
+
     const query = {
       $and: [
-        {
-          $or: [
-            { name: { $regex: searchTerm, $options: 'i' } },
-            { address: { $regex: searchTerm, $options: 'i' } },
-            { description: { $regex: searchTerm, $options: 'i' } },
-            { 'location.postcode': { $regex: searchTerm, $options: 'i' } },
-            { 'location.city': { $regex: searchTerm, $options: 'i' } },
-          ],
-        },
+        ...searchConditions,
         { offer },
         { furnished },
         { parking },
         { type },
         { propertyType },
         { regularPrice: { $gte: minPrice, $lte: maxPrice } },
+        ...(Object.keys(bedroomFilter).length > 0 ? [bedroomFilter] : []),
       ],
     }
 
@@ -263,7 +300,7 @@ export const geocodeAddress = async (req, res, next) => {
 
 export const getListingsNearby = async (req, res, next) => {
   try {
-    const { lat, lng, radius = 10 } = req.query
+    const { lat, lng, radius = 10, minBedrooms, maxBedrooms } = req.query
 
     if (!lat || !lng) {
       return res
@@ -279,7 +316,8 @@ export const getListingsNearby = async (req, res, next) => {
       `Searching for listings near lat: ${latitude}, lng: ${longitude}, radius: ${radius}km`
     )
 
-    const listings = await Listing.find({
+    // Build the query object
+    const query = {
       'location.coordinates.lat': {
         $gte: latitude - radiusInDegrees,
         $lte: latitude + radiusInDegrees,
@@ -288,7 +326,32 @@ export const getListingsNearby = async (req, res, next) => {
         $gte: longitude - radiusInDegrees,
         $lte: longitude + radiusInDegrees,
       },
-    })
+    }
+
+    // Add bedroom filtering if specified
+    const minBed =
+      minBedrooms !== undefined && minBedrooms !== ''
+        ? parseInt(minBedrooms)
+        : null
+    const maxBed =
+      maxBedrooms !== undefined && maxBedrooms !== ''
+        ? parseInt(maxBedrooms)
+        : null
+
+    if (minBed !== null || maxBed !== null) {
+      if (minBed !== null && maxBed !== null) {
+        // Both min and max specified
+        query.bedrooms = { $gte: minBed, $lte: maxBed }
+      } else if (minBed !== null) {
+        // Only min specified
+        query.bedrooms = { $gte: minBed }
+      } else if (maxBed !== null) {
+        // Only max specified
+        query.bedrooms = { $lte: maxBed }
+      }
+    }
+
+    const listings = await Listing.find(query)
 
     console.log(`Found ${listings.length} listings nearby`)
 

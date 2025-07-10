@@ -14,6 +14,8 @@ export default function Search() {
     searchTerm: '',
     type: 'all',
     propertyType: 'all',
+    minBedrooms: '',
+    maxBedrooms: '',
     minPrice: '',
     maxPrice: '',
     parking: false,
@@ -90,6 +92,8 @@ export default function Search() {
       searchTerm: get('searchTerm'),
       type: get('type', 'all'),
       propertyType: get('propertyType', 'all'),
+      minBedrooms: get('minBedrooms'),
+      maxBedrooms: get('maxBedrooms'),
       minPrice: get('minPrice'),
       maxPrice: get('maxPrice'),
       parking: get('parking') === 'true',
@@ -102,13 +106,40 @@ export default function Search() {
     fetchData()
   }, [location.search])
 
+  // Helper function to build nearby API URL with filters
+  const buildNearbyUrl = (lat, lng, radius = 3) => {
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString(),
+      radius: radius.toString(),
+    })
+
+    // Add bedroom filters if selected
+    if (sidebardata.minBedrooms && sidebardata.minBedrooms !== '') {
+      params.set('minBedrooms', sidebardata.minBedrooms)
+    }
+    if (sidebardata.maxBedrooms && sidebardata.maxBedrooms !== '') {
+      params.set('maxBedrooms', sidebardata.maxBedrooms)
+    }
+
+    return `/api/listing/nearby?${params.toString()}`
+  }
+
   const handleChange = (e) => {
     const { id, value, checked } = e.target
     if (['all', 'rent', 'sale'].includes(id)) {
       setSidebarData((prev) => ({ ...prev, type: id }))
     } else if (id === 'propertyType') {
       setSidebarData((prev) => ({ ...prev, propertyType: value }))
-    } else if (['minPrice', 'maxPrice', 'searchTerm'].includes(id)) {
+    } else if (
+      [
+        'minPrice',
+        'maxPrice',
+        'minBedrooms',
+        'maxBedrooms',
+        'searchTerm',
+      ].includes(id)
+    ) {
       setSidebarData((prev) => ({ ...prev, [id]: value }))
     } else if (['parking', 'furnished', 'offer'].includes(id)) {
       setSidebarData((prev) => ({ ...prev, [id]: checked }))
@@ -165,9 +196,7 @@ export default function Search() {
 
         // Fetch nearby listings from backend
         const nearbyRes = await fetch(
-          apiUrl(
-            `/api/listing/nearby?lat=${center.lat}&lng=${center.lng}&radius=${searchRadius}`
-          )
+          apiUrl(buildNearbyUrl(center.lat, center.lng, searchRadius))
         )
         const listingsData = await nearbyRes.json()
         setListings(listingsData)
@@ -208,9 +237,7 @@ export default function Search() {
             setShowMap(true)
 
             // Fetch nearby listings from backend
-            const nearbyRes = await fetch(
-              apiUrl(`/api/listing/nearby?lat=${lat}&lng=${lng}&radius=3`)
-            )
+            const nearbyRes = await fetch(apiUrl(buildNearbyUrl(lat, lng, 3)))
             const listingsData = await nearbyRes.json()
             setListings(listingsData)
             setShowMore(false)
@@ -249,9 +276,7 @@ export default function Search() {
           setShowMap(true)
 
           // Fetch nearby listings from backend
-          const nearbyRes = await fetch(
-            apiUrl(`/api/listing/nearby?lat=${lat}&lng=${lng}&radius=3`)
-          )
+          const nearbyRes = await fetch(apiUrl(buildNearbyUrl(lat, lng, 3)))
           const listingsData = await nearbyRes.json()
           setListings(listingsData)
           setShowMore(false)
@@ -344,6 +369,32 @@ export default function Search() {
 
           <div>
             <label className='font-semibold text-gray-700 block mb-1'>
+              🛏️ Bedrooms
+            </label>
+            <div className='flex gap-2'>
+              <input
+                type='number'
+                id='minBedrooms'
+                placeholder='Min'
+                onChange={handleChange}
+                value={sidebardata.minBedrooms}
+                className='bg-slate-400 p-3 rounded-lg w-full'
+                min='0'
+              />
+              <input
+                type='number'
+                id='maxBedrooms'
+                placeholder='Max'
+                onChange={handleChange}
+                value={sidebardata.maxBedrooms}
+                className='bg-slate-400 p-3 rounded-lg w-full'
+                min='0'
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className='font-semibold text-gray-700 block mb-1'>
               💰 Price Range
             </label>
             <div className='flex gap-2'>
@@ -354,6 +405,7 @@ export default function Search() {
                 onChange={handleChange}
                 value={sidebardata.minPrice}
                 className='bg-slate-400 p-3 rounded-lg w-full'
+                min='0'
               />
               <input
                 type='number'
@@ -362,6 +414,7 @@ export default function Search() {
                 onChange={handleChange}
                 value={sidebardata.maxPrice}
                 className='bg-slate-400 p-3 rounded-lg w-full'
+                min='0'
               />
             </div>
           </div>
