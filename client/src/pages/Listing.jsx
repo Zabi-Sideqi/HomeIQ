@@ -36,9 +36,12 @@ export default function Listing() {
     const fetchListing = async () => {
       try {
         setLoading(true)
-        const res = await fetch(apiUrl(`/api/listing/get/${params.listingId}`), {
-          credentials: 'include',
-        })
+        const res = await fetch(
+          apiUrl(`/api/listing/get/${params.listingId}`),
+          {
+            credentials: 'include',
+          }
+        )
         const data = await res.json()
         if (data.success === false) {
           setError(true)
@@ -57,8 +60,10 @@ export default function Listing() {
           data.imageUrls.forEach((url, index) => {
             console.log(`Testing image ${index + 1}:`, url)
             const img = new Image()
-            img.onload = () => console.log(`✅ Image ${index + 1} loaded successfully`)
-            img.onerror = () => console.log(`❌ Image ${index + 1} failed to load`)
+            img.onload = () =>
+              console.log(`✅ Image ${index + 1} loaded successfully`)
+            img.onerror = () =>
+              console.log(`❌ Image ${index + 1} failed to load`)
             img.src = url
           })
         }
@@ -80,9 +85,26 @@ export default function Listing() {
           })
         },
         (error) => {
-          console.log('Location access denied:', error)
+          console.log('Geolocation error:', error)
+          let errorMessage = 'Location access denied'
+
+          if (error.code === 1) {
+            errorMessage =
+              'Location permission denied. Distance calculations will not be available.'
+          } else if (error.code === 2) {
+            errorMessage =
+              'Location unavailable. Distance calculations will not be available.'
+          } else if (error.code === 3) {
+            errorMessage =
+              'Location request timed out. Distance calculations will not be available.'
+          }
+
+          console.log(errorMessage)
+          // Don't show alert, just log the error - user can still view the listing
         }
       )
+    } else {
+      console.log('Geolocation not supported by this browser')
     }
   }, [])
 
@@ -120,7 +142,10 @@ export default function Listing() {
   const openInMaps = () => {
     const address = encodeURIComponent(listing.address)
 
-    if (listing.location?.coordinates?.lat && listing.location?.coordinates?.lng) {
+    if (
+      listing.location?.coordinates?.lat &&
+      listing.location?.coordinates?.lng
+    ) {
       const { lat, lng } = listing.location.coordinates
       const isMobile =
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
@@ -130,9 +155,15 @@ export default function Listing() {
       if (isMobile) {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
         if (isIOS) {
-          window.open(`http://maps.apple.com/?q=${lat},${lng}&ll=${lat},${lng}`, '_blank')
+          window.open(
+            `http://maps.apple.com/?q=${lat},${lng}&ll=${lat},${lng}`,
+            '_blank'
+          )
         } else {
-          window.open(`geo:${lat},${lng}?q=${lat},${lng}(${listing.name})`, '_blank')
+          window.open(
+            `geo:${lat},${lng}?q=${lat},${lng}(${listing.name})`,
+            '_blank'
+          )
         }
       } else {
         window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank')

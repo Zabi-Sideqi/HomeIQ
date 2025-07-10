@@ -1,4 +1,3 @@
-
 //api/controllers/listing.controller.js
 
 import Listing from '../models/listing.model.js'
@@ -196,22 +195,49 @@ export const getListingsByIds = async (req, res, next) => {
 export const geocodeAddress = async (req, res, next) => {
   try {
     const { address } = req.query
+    console.log('📍 Geocoding request received for address:', address)
 
     if (!address) {
-      return res.status(400).json({ message: 'Address parameter is required' })
+      return res.status(400).json({
+        success: false,
+        message: 'Address parameter is required',
+      })
     }
 
-    const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY
+    // Use the correct environment variable name for backend
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY
+    console.log('🔑 API Key status:', apiKey ? 'Present' : 'Missing')
+
+    if (!apiKey) {
+      console.error('Google Maps API key not found in environment variables')
+      return res.status(500).json({
+        success: false,
+        message: 'Google Maps API key not configured',
+      })
+    }
 
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
       address
     )}&key=${apiKey}`
 
+    console.log('🌐 Making request to Google Maps API...')
+
     const response = await fetch(url)
     const data = await response.json()
 
+    console.log('📊 Google Maps API Response:', {
+      status: data.status,
+      results_count: data.results ? data.results.length : 0,
+      error_message: data.error_message,
+    })
+
     if (data.status !== 'OK' || !data.results || data.results.length === 0) {
-      return res.status(404).json({ message: 'No results found for address' })
+      return res.status(404).json({
+        success: false,
+        message: 'No results found for address',
+        status: data.status,
+        error_message: data.error_message,
+      })
     }
 
     const result = data.results[0]
@@ -222,12 +248,15 @@ export const geocodeAddress = async (req, res, next) => {
       formatted_address: result.formatted_address,
     }
 
+    console.log('✅ Geocoding successful:', coordinates)
+
     return res.status(200).json({
       success: true,
       coordinates: coordinates,
       address: address,
     })
   } catch (error) {
+    console.error('❌ Geocoding error:', error)
     next(error)
   }
 }

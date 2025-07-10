@@ -132,38 +132,90 @@ export default function Search() {
     if (!sidebardata.searchTerm.trim()) return
     setGeocodeLoading(true)
     try {
-      const res = await fetch(
-        apiUrl(
-          `/api/listing/geocodeAddress?address=${encodeURIComponent(
+      // Try Google Maps API first
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+
+      if (apiKey) {
+        try {
+          const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+              sidebardata.searchTerm
+            )}&key=${apiKey}`
+          )
+
+          const data = await response.json()
+
+          if (data.status === 'OK' && data.results && data.results.length > 0) {
+            const result = data.results[0]
+            const { lat, lng } = result.geometry.location
+
+            // Set map center and search location
+            setMapCenter([lat, lng])
+            setSearchLocation({
+              lat,
+              lng,
+              address: sidebardata.searchTerm,
+            })
+            setShowMap(true)
+
+            // Fetch nearby listings from backend
+            const nearbyRes = await fetch(
+              apiUrl(`/api/listing/nearby?lat=${lat}&lng=${lng}&radius=3`)
+            )
+            const listingsData = await nearbyRes.json()
+            setListings(listingsData)
+            setShowMore(false)
+            setGeocodeLoading(false)
+            return
+          }
+        } catch (error) {
+          console.warn('Google Maps API failed, trying fallback:', error)
+        }
+      }
+
+      // Fallback: Use OpenStreetMap Nominatim API (free, no API key needed)
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
             sidebardata.searchTerm
-          )}`
+          )}&limit=1`
         )
-      )
-      const data = await res.json()
-      if (data.success && data.coordinates) {
-        const { lat, lng } = data.coordinates
 
-        // Set map center and search location
-        setMapCenter([lat, lng])
-        setSearchLocation({
-          lat,
-          lng,
-          address: sidebardata.searchTerm,
-        })
-        setShowMap(true)
+        const data = await response.json()
 
-        // Fetch nearby listings
-        const nearbyRes = await fetch(
-          apiUrl(`/api/listing/nearby?lat=${lat}&lng=${lng}&radius=3`)
-        )
-        const listingsData = await nearbyRes.json()
-        setListings(listingsData)
-        setShowMore(false)
-      } else {
-        console.warn('No results from geocoding')
+        if (data && data.length > 0) {
+          const result = data[0]
+          const lat = parseFloat(result.lat)
+          const lng = parseFloat(result.lon)
+
+          // Set map center and search location
+          setMapCenter([lat, lng])
+          setSearchLocation({
+            lat,
+            lng,
+            address: sidebardata.searchTerm,
+          })
+          setShowMap(true)
+
+          // Fetch nearby listings from backend
+          const nearbyRes = await fetch(
+            apiUrl(`/api/listing/nearby?lat=${lat}&lng=${lng}&radius=3`)
+          )
+          const listingsData = await nearbyRes.json()
+          setListings(listingsData)
+          setShowMore(false)
+        } else {
+          alert(
+            'No results found for this location. Please try a different search term.'
+          )
+        }
+      } catch (error) {
+        console.error('Fallback geocoding failed:', error)
+        alert('Error searching for location. Please try again.')
       }
     } catch (error) {
       console.error('Error searching for location:', error)
+      alert('Error searching for location. Please try again.')
     } finally {
       setGeocodeLoading(false)
     }

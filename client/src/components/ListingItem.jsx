@@ -44,9 +44,9 @@ export default function ListingItem({ listing, onFavoriteChange }) {
   }
 
   const openDirections = () => {
-    if (!listing?.address) return alert('Ingen adress tillgänglig.')
+    if (!listing?.address) return alert('No address available.')
     if (!navigator.geolocation)
-      return alert('Din webbläsare stöder inte platsdelning.')
+      return alert('Your browser does not support location sharing.')
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -55,7 +55,29 @@ export default function ListingItem({ listing, onFavoriteChange }) {
         const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`
         window.open(url, '_blank')
       },
-      () => alert('Kunde inte hämta din plats.')
+      (error) => {
+        console.log('Geolocation error:', error)
+        let errorMessage = 'Could not get your location.'
+
+        if (error.code === 1) {
+          errorMessage =
+            'Location access denied. Please enable location permission in your browser settings and try again.'
+        } else if (error.code === 2) {
+          errorMessage =
+            'Location unavailable. Please check your internet connection.'
+        } else if (error.code === 3) {
+          errorMessage = 'Location request timed out. Please try again.'
+        }
+
+        // Fallback: Open directions without current location
+        if (
+          confirm(errorMessage + '\n\nWould you like to get directions anyway?')
+        ) {
+          const destination = encodeURIComponent(listing.address)
+          const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`
+          window.open(url, '_blank')
+        }
+      }
     )
   }
 
