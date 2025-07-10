@@ -30,6 +30,7 @@ export default function Search() {
   const [showMap, setShowMap] = useState(false)
   const [mapCenter, setMapCenter] = useState(null)
   const [searchLocation, setSearchLocation] = useState(null)
+  const [areaBoundary, setAreaBoundary] = useState(null)
 
   useEffect(() => {
     const fetchPropertyTypes = async () => {
@@ -131,7 +132,53 @@ export default function Search() {
   const handleGeocodeSearch = async () => {
     if (!sidebardata.searchTerm.trim()) return
     setGeocodeLoading(true)
+
     try {
+      // Get area boundaries from our API
+      const boundaryRes = await fetch(
+        apiUrl(
+          `/api/listing/area-boundaries?searchTerm=${encodeURIComponent(
+            sidebardata.searchTerm
+          )}`
+        )
+      )
+
+      const boundaryData = await boundaryRes.json()
+
+      if (boundaryData.success) {
+        const { center, boundary, displayName, useCircle, radius } =
+          boundaryData
+
+        // Set map center and search location
+        setMapCenter([center.lat, center.lng])
+        setSearchLocation({
+          lat: center.lat,
+          lng: center.lng,
+          address: displayName || sidebardata.searchTerm,
+          radius: radius || 5000,
+        })
+        setAreaBoundary(boundary)
+        setShowMap(true)
+
+        // Determine search radius based on boundary or default
+        const searchRadius = useCircle ? radius / 1000 : 10 // Convert to km
+
+        // Fetch nearby listings from backend
+        const nearbyRes = await fetch(
+          apiUrl(
+            `/api/listing/nearby?lat=${center.lat}&lng=${center.lng}&radius=${searchRadius}`
+          )
+        )
+        const listingsData = await nearbyRes.json()
+        setListings(listingsData)
+        setShowMore(false)
+        setGeocodeLoading(false)
+        return
+      }
+
+      // Fallback to the old method if boundary API fails
+      console.warn('Boundary API failed, falling back to geocoding')
+
       // Try Google Maps API first
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
@@ -155,7 +202,9 @@ export default function Search() {
               lat,
               lng,
               address: sidebardata.searchTerm,
+              radius: 3000,
             })
+            setAreaBoundary(null) // No boundary data
             setShowMap(true)
 
             // Fetch nearby listings from backend
@@ -194,7 +243,9 @@ export default function Search() {
             lat,
             lng,
             address: sidebardata.searchTerm,
+            radius: 3000,
           })
+          setAreaBoundary(null) // No boundary data
           setShowMap(true)
 
           // Fetch nearby listings from backend
@@ -359,8 +410,12 @@ export default function Search() {
             <div className='flex flex-col gap-3'>
               <label className='font-semibold'>📍 Area Search</label>
               <p className='text-sm text-gray-600'>
-                Enter a neighborhood or zone and click below to show listings
-                near that location.
+                Search for cities, districts, or areas worldwide. The system
+                automatically finds exact administrative boundaries when
+                available.
+                <br />
+                <strong>Examples:</strong> "Stockholm", "Manhattan", "Solna
+                Sweden", "Birmingham UK", "Munich Germany"
               </p>
               <button
                 type='button'
@@ -397,6 +452,7 @@ export default function Search() {
               center={mapCenter}
               listings={listings}
               searchLocation={searchLocation}
+              areaBoundary={areaBoundary}
             />
           </div>
         )}

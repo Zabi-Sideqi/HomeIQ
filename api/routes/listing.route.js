@@ -12,6 +12,7 @@ import {
   geocodeAddress,
   getListingsNearby,
   deleteListingImages,
+  getAreaBoundaries,
 } from '../controllers/listing.controller.js'
 import { verifyToken } from '../utils/verifyUser.js'
 
@@ -29,6 +30,7 @@ router.get('/get/:id', getListing)
 router.get('/get', getListings)
 router.get('/geocodeAddress', geocodeAddress)
 router.get('/nearby', getListingsNearby)
+router.get('/area-boundaries', getAreaBoundaries)
 
 // ✅ Ny öppen route: Returnerar property types till frontend
 router.get('/property-types', (req, res) => {
