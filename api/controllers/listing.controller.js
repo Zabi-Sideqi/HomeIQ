@@ -1,198 +1,264 @@
 
 //api/controllers/listing.controller.js
 
-import Listing from "../models/listing.model.js";
-import { errorHandler } from '../utils/error.js';
-import User from "../models/user.model.js";
+import Listing from '../models/listing.model.js'
+import { errorHandler } from '../utils/error.js'
+import fetch from 'node-fetch'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 export const createListing = async (req, res, next) => {
-
-    try {
-        // check if the listing already exists with the same address
-        const existingListing = await Listing.findOne({address: req.body.address});
-        if (existingListing) {
-            return res.status(400).json({
-                success: false,
-                 message: "A listing with this address already exists.",
-                 });
-        }
-        // create a new listing
-        const listing = await Listing.create(req.body);
-        return res.status(201).json(listing)
-
-    } catch (error) {
-        next(error);
-    }
-};
-
-//delete a listing
-export const deleteListing = async (req, res, next) => {
   try {
-    const listing = await Listing.findById(req.params.id);
+    const existingListing = await Listing.findOne({ address: req.body.address })
+    if (existingListing) {
+      return res.status(400).json({
+        success: false,
+        message: 'A listing with this address already exists.',
+      })
+    }
+
+    const listing = await Listing.create(req.body)
+    return res.status(201).json(listing)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const deleteListing = async (req, res, next) => {
+  const listing = await Listing.findById(req.params.id)
+  if (!listing) {
+    return next(errorHandler(404, 'Listing not found'))
+  }
+
+  if (listing.userId !== listing.userRef) {
+    return next(errorHandler(401, 'You can only delete your own listings'))
+  }
+
+  try {
+    await Listing.findByIdAndDelete(req.params.id)
+    return res.status(200).json('Listing has been deleted!')
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const deleteListingImages = async (req, res, next) => {
+  const { id } = req.params
+  const { imageUrls } = req.body
+
+  try {
+    const listing = await Listing.findById(id)
     if (!listing) {
-      return next(errorHandler(404, "Listing not found"));
+      return next(errorHandler(404, 'Listing not found'))
     }
 
-    // ✅ Check if the user is the owner of the listing
-    if (req.user.id !== listing.userRef.toString()) {
-      return next(errorHandler(401, "You can only delete your own listings"));
-    }
+    listing.imageUrls = listing.imageUrls.filter(
+      (url) => !imageUrls.includes(url)
+    )
 
-    await Listing.findByIdAndDelete(req.params.id);
+    await listing.save()
     return res.status(200).json({
       success: true,
-      message: "Listing has been deleted!",
-    });
+      message: 'Images deleted successfully',
+      listing,
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
-
-
-// Delete one or more images from a listing
-export const deleteListingImages = async (req, res, next) => {
-    const { id } = req.params;
-    const {imageUrls } = req.body;
-
-    try {
-        const listing = await Listing.findById(id);
-        if(!listing) {
-            return next(errorHandler(404, "Listing not found"));
-
-        }
-        listing.imageUrls = listing.imageUrls.filter(url => !imageUrls.includes(url));
-
-        await listing.save();
-        return res.status(200).json({
-            success: true,
-            message: "Images deleted successfully",
-            listing
-        });
-    } catch (error){
-        next(error);
-    }
-
 }
-
-// Update a listing
 
 export const updateListing = async (req, res, next) => {
-  try {
-    const listing = await Listing.findById(req.params.id);
-    if (!listing) {
-      return next(errorHandler(404, "Listing not found"));
-    }
-
-    // ✅ Kolla om det är rätt användare
-    if (req.user.id !== listing.userRef.toString()) {
-      return next(errorHandler(401, "You can only update your own listings"));
-    }
-
-    const updatedListing = await Listing.findByIdAndUpdate(req.params.id, req.body, { new: true });
-
-    res.status(200).json({
-      success: true,
-      message: "Listing updated successfully",
-      listing: updatedListing,
-    });
-  } catch (error) {
-    next(error);
+  const listing = await Listing.findById(req.params.id)
+  if (!listing) {
+    return next(errorHandler(404, 'Listing not found'))
   }
-};
 
+  if (listing.userId !== listing.userRef) {
+    return next(errorHandler(401, 'You can only update your own listings'))
+  }
 
-// Get a listing by ID
-export const getListing = async (req, res, next) => {
-    try {
-        const listing = await Listing.findById(req.params.id);
-        if (!listing) {
-            return next(errorHandler(404, "Listing not found"));  
-        }
-        return res.status(200).json(listing);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    const updatedListing = await Listing.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    )
+    return res.status(200).json(updatedListing)
+  } catch (error) {
+    next(error)
+  }
 }
 
-// Create getListings for searchBox 
-export const getListings = async (req, res, next) => {
-    try {
-        const limit = parseInt(req.query.limit) || 10; // Default limit to 10 if not provided
-        const startIndex = parseInt(req.query.startIndex) || 0; // Default startIndex to 0 if not provided
-        let offer = req.query.offer;
-
-        if( offer === undefined || offer === "false" ) {
-            offer = {$in: [false, true]} // If offer is undefined or false, return all listings;
-        }
-
-        let furnished = req.query.furnished;
-        if( furnished === undefined || furnished === "false" ) {
-            furnished = {$in: [false, true]} // If furnished is undefined or false, return all listings;
-        }
-
-        let parking = req.query.parking;
-        if( parking === undefined || parking === "false" ) {
-            parking = {$in: [false, true]} // If parking is undefined or false, return all listings;
-        }
-
-        let type = req.query.type;
-        if( type === undefined || type === "all" ) {
-            type = {$in: ['sale', 'rent']} // If type is undefined or false, return all listings;
-        }
-
-        const searchTerm = req.query.searchTerm || ""; // Default searchTerm to empty string if not provided
-
-        const sort = req.query.sort || "createdAt"; // Default sort to createdAt if not provided
-        const order = req.query.order || "desc"; // Default sortOrder to desc if not provided
-
-        const listings = await Listing.find({
-            name: { $regex: searchTerm, $options: "i" },
-            offer,
-            furnished,
-            parking,
-            type,
- 
-        }).sort({ [sort]: order })
-        .limit(limit).skip(startIndex);
-
-        return res.status(200).json(listings);
-    } catch (error) {
-        next(error);
+export const getListing = async (req, res, next) => {
+  try {
+    const listing = await Listing.findById(req.params.id)
+    if (!listing) {
+      return next(errorHandler(404, 'Listing not found'))
     }
+    return res.status(200).json(listing)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getListings = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10
+    const startIndex = parseInt(req.query.startIndex) || 0
+
+    const minPrice = req.query.minPrice ? parseInt(req.query.minPrice) : 0
+    const maxPrice = req.query.maxPrice
+      ? parseInt(req.query.maxPrice)
+      : Number.MAX_SAFE_INTEGER
+
+    let offer = req.query.offer
+    if (offer === undefined || offer === 'false') {
+      offer = { $in: [false, true] }
+    }
+
+    let furnished = req.query.furnished
+    if (furnished === undefined || furnished === 'false') {
+      furnished = { $in: [false, true] }
+    }
+
+    let parking = req.query.parking
+    if (parking === undefined || parking === 'false') {
+      parking = { $in: [false, true] }
+    }
+
+    let type = req.query.type
+    if (type === undefined || type === 'all') {
+      type = { $in: ['sale', 'rent'] }
+    }
+
+    let propertyType = req.query.propertyType
+    if (propertyType === undefined || propertyType === 'all') {
+      propertyType = {
+        $in: [
+          'Detached',
+          'Semi-detached',
+          'Terraced',
+          'Flat',
+          'Bungalow',
+          'Park Home',
+          'Land',
+          'Student Halls',
+        ],
+      }
+    }
+
+    const searchTerm = req.query.searchTerm || ''
+    const sort = req.query.sort || 'createdAt'
+    const order = req.query.order || 'desc'
+
+    const query = {
+      $and: [
+        {
+          $or: [
+            { name: { $regex: searchTerm, $options: 'i' } },
+            { address: { $regex: searchTerm, $options: 'i' } },
+            { description: { $regex: searchTerm, $options: 'i' } },
+            { 'location.postcode': { $regex: searchTerm, $options: 'i' } },
+            { 'location.city': { $regex: searchTerm, $options: 'i' } },
+          ],
+        },
+        { offer },
+        { furnished },
+        { parking },
+        { type },
+        { propertyType },
+        { regularPrice: { $gte: minPrice, $lte: maxPrice } },
+      ],
+    }
+
+    const listings = await Listing.find(query)
+      .sort({ [sort]: order })
+      .limit(limit)
+      .skip(startIndex)
+
+    return res.status(200).json(listings)
+  } catch (error) {
+    next(error)
+  }
 }
 
 export const getListingsByIds = async (req, res, next) => {
-    try {
-        const { ids } = req.body; // Expecting an array of IDs in the request body
-
-        if (!Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ message: "Invalid or empty IDs array" });
-        }
-
-        const listings = await Listing.find({ _id: { $in: ids } });
-
-        if (listings.length === 0) {
-            return res.status(404).json({ message: "No listings found for the provided IDs" });
-        }
-
-        return res.status(200).json(listings);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    const { ids } = req.body
+    const listings = await Listing.find({ _id: { $in: ids } })
+    res.status(200).json(listings)
+  } catch (error) {
+    next(error)
+  }
 }
 
-export const getFavoritesListings = async (req, res, next) => {
+export const geocodeAddress = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const { address } = req.query
 
-    if (!user || !user.favorites || user.favorites.length === 0) {
-      return res.status(200).json([]);
+    if (!address) {
+      return res.status(400).json({ message: 'Address parameter is required' })
     }
 
-    const listings = await Listing.find({ _id: { $in: user.favorites } });
+    const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY
 
-    res.status(200).json(listings);
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+      address
+    )}&key=${apiKey}`
+
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+      return res.status(404).json({ message: 'No results found for address' })
+    }
+
+    const result = data.results[0]
+
+    const coordinates = {
+      lat: result.geometry.location.lat,
+      lng: result.geometry.location.lng,
+      formatted_address: result.formatted_address,
+    }
+
+    return res.status(200).json({
+      success: true,
+      coordinates: coordinates,
+      address: address,
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
+
+export const getListingsNearby = async (req, res, next) => {
+  try {
+    const { lat, lng, radius = 10 } = req.query
+
+    if (!lat || !lng) {
+      return res
+        .status(400)
+        .json({ message: 'Latitude and longitude are required' })
+    }
+
+    const latitude = parseFloat(lat)
+    const longitude = parseFloat(lng)
+    const radiusInDegrees = parseFloat(radius) / 111
+
+    const listings = await Listing.find({
+      'location.coordinates.lat': {
+        $gte: latitude - radiusInDegrees,
+        $lte: latitude + radiusInDegrees,
+      },
+      'location.coordinates.lng': {
+        $gte: longitude - radiusInDegrees,
+        $lte: longitude + radiusInDegrees,
+      },
+    })
+
+    res.status(200).json(listings)
+  } catch (error) {
+    next(error)
+  }
+}

@@ -1,6 +1,7 @@
 
 //api/models/listing.model.js
 
+
 import mongoose from "mongoose";
 
 const listingSchema = new mongoose.Schema(
@@ -45,6 +46,32 @@ const listingSchema = new mongoose.Schema(
         type: {
             type: String,
             required: true,
+            enum: ['sale', 'rent'] // For sale or rent
+        },
+        propertyType: {
+            type: String,
+            required: true,
+            enum: ['Detached', 'Semi-detached', 'Terraced', 'Flat', 'Bungalow', 'Park Home', 'Land', 'Student Halls']
+        },
+        location: {
+            postcode: {
+                type: String,
+                required: false,
+            },
+            city: {
+                type: String,
+                required: false,
+            },
+            coordinates: {
+                lat: {
+                    type: Number,
+                    required: false,
+                },
+                lng: {
+                    type: Number,
+                    required: false,
+                }
+            }
         },
         offer:{
             type: Boolean,
@@ -60,11 +87,10 @@ const listingSchema = new mongoose.Schema(
         },
 
 
-    }, { timestamps: true } // Automatically creates createdAt and updatedAt fields
+    }, { timestamps: true } // Skapar createdAt och updatedAt fält automatiskt
 )
 
 const Listing = mongoose.model("Listing", listingSchema)
 
 export default Listing
-
 

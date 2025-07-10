@@ -1,19 +1,31 @@
 //api/utils/verifyUser.js
+// api/utils/verifyToken.js
 import jwt from 'jsonwebtoken';
 import { errorHandler } from './error.js';
 
 export const verifyToken = (req, res, next) => {
-  // Läs token från Authorization header eller cookie
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ')
-    ? authHeader.split(' ')[1]
-    : req.cookies.access_token;
+  // Get token from cookie first (priority same as in Code 1)
+  let token = req.cookies?.access_token;
 
-  if (!token) return next(errorHandler(401, 'Unauthorized'));
+  // If no cookie token is found, check the Authorization header
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+  }
 
+  // If no token found at all → 401 Unauthorized
+  if (!token) return next(errorHandler(401, 'Unauthorized - No token provided'));
+
+  // Verify the JWT
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return next(errorHandler(403, 'Forbidden'));
+    if (err) {
+      console.error('JWT verification error:', err); // Log error for debugging
+      return next(errorHandler(403, 'Forbidden - Invalid token'));
+    }
 
+    // Attach decoded user info to the request object
     req.user = user;
     next();
   });

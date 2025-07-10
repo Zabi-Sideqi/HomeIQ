@@ -5,70 +5,78 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import ListingItem from '../components/ListingItem'
 import { apiUrl } from '../utils/api'
-import { logApiCall } from '../utils/errorHandler'
 
 export default function Favorites() {
-  const { token } = useSelector((state) => state.user)
+  const { currentUser, token } = useSelector((state) => state.user)
   const [favoriteListings, setFavoriteListings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const fetchFavorites = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const url = apiUrl('/api/listing/favorites')
-      const options = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-
-      // Log the API call for debugging
-      logApiCall(url, options)
-
-      const res = await axios.get(url, options)
-
-      // Ensure we always have an array
-      const data = Array.isArray(res.data) ? res.data : []
-      setFavoriteListings(data)
-    } catch (error) {
-      console.error(
-        'Kunde inte hämta favoriter:',
-        error.response?.data || error.message
-      )
-      setError('Failed to load favorites')
-      // Set empty array on error to prevent map error
-      setFavoriteListings([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    const fetchFavoritesEffect = async () => {
-      if (token) {
-        await fetchFavorites()
+    const fetchFavorites = async () => {
+      if (!currentUser || !token) {
+        setError('Please log in to view your favorites')
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+
+        // 1️⃣ Get user's favorite IDs
+        const userRes = await axios.get(apiUrl(`/api/user/${currentUser._id}`), {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        })
+
+        const favoriteIds = userRes.data?.favorites || []
+
+        // 2️⃣ Get listings for those favorite IDs
+        if (favoriteIds.length > 0) {
+          const listingsRes = await axios.put(
+            apiUrl('/api/listing/favorites'),
+            { ids: favoriteIds },
+            {
+              headers: { Authorization: `Bearer ${token}` },
+              withCredentials: true,
+            }
+          )
+
+          setFavoriteListings(listingsRes.data)
+        } else {
+          setFavoriteListings([])
+        }
+
+        setError(null)
+      } catch (err) {
+        console.error('Favorites fetch error:', err)
+        setError('Could not load favorites. Please try again.')
+        setFavoriteListings([])
+      } finally {
+        setLoading(false)
       }
     }
-    fetchFavoritesEffect()
-    // eslint-disable-next-line
-  }, [token])
+
+    fetchFavorites()
+  }, [currentUser, token])
+
+  if (!currentUser) {
+    return (
+      <div className='p-4'>
+        <h1 className='text-2xl font-bold mb-4'>My Favorites</h1>
+        <p className='text-gray-600'>Please log in to view your favorites.</p>
+      </div>
+    )
+  }
 
   return (
     <div className='p-4'>
       <h1 className='text-2xl font-bold mb-4'>My Favorites</h1>
 
-      {loading && (
-        <div className='flex justify-center items-center p-8'>
-          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
-          <span className='ml-2'>Loading favorites...</span>
-        </div>
-      )}
+      {loading && <p className='text-gray-600'>Loading your favorites...</p>}
 
       {error && (
-        <div className='bg-red-50 border border-red-200 text-red-600 p-4 rounded-md mb-4'>
+        <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4'>
           {error}
         </div>
       )}
@@ -76,15 +84,10 @@ export default function Favorites() {
       {!loading && !error && (
         <div className='flex flex-wrap gap-4'>
           {favoriteListings.length === 0 ? (
-            <p className='text-gray-500'>You have no favorites yet.</p>
+            <p className='text-gray-600'>You don't have any favorites yet.</p>
           ) : (
             favoriteListings.map((listing) => (
-              <ListingItem
-                key={listing._id}
-                listing={listing}
-                isFavorite={true}
-                onFavoriteChange={fetchFavorites}
-              />
+              <ListingItem key={listing._id} listing={listing} />
             ))
           )}
         </div>

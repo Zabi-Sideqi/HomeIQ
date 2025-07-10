@@ -1,222 +1,366 @@
-//client/src/pages/Search.jsx
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import ListingItem from '../components/ListingItem';
-import { apiUrl } from '../utils/api';
-
+// client/src/pages/Search.jsx
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import ListingItem from '../components/ListingItem'
+import PropertyMap from '../components/PropertyMap'
+import { apiUrl } from '../utils/api'
 
 export default function Search() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const [propertyTypes, setPropertyTypes] = useState([])
   const [sidebardata, setSidebarData] = useState({
-    searchTerm: "",
-    type: "all",
+    searchTerm: '',
+    type: 'all',
+    propertyType: 'all',
+    minPrice: '',
+    maxPrice: '',
     parking: false,
     furnished: false,
     offer: false,
-    sort: "createdAt",
-    order: "desc",
-  });
+    sort: 'createdAt',
+    order: 'desc',
+  })
 
-  const [loading, setLoading] = useState(false);
-  const [listings, setListings] = useState([]);
-  const [showMore, setShowMore] = useState(false);
-  
+  const [loading, setLoading] = useState(false)
+  const [listings, setListings] = useState([])
+  const [showMore, setShowMore] = useState(false)
+  const [geocodeLoading, setGeocodeLoading] = useState(false)
+  const [showMap, setShowMap] = useState(false)
+  const [mapCenter, setMapCenter] = useState(null)
+  const [searchLocation, setSearchLocation] = useState(null)
+
   useEffect(() => {
-    const urlParms = new URLSearchParams(location.search);
-    const searchTermFromUrl = urlParms.get('searchTerm');
-    const typeFromUrl = urlParms.get('type');
-    const parkingFromUrl = urlParms.get('parking');
-    const furnishedFromUrl = urlParms.get('furnished');
-    const offerFromUrl = urlParms.get('offer');
-    const sortFromUrl = urlParms.get('sort');
-    const orderFromUrl = urlParms.get('order');
+    const fetchPropertyTypes = async () => {
+      try {
+        const res = await fetch(apiUrl('/api/listing/property-types'))
+        const data = await res.json()
+        setPropertyTypes(data)
+      } catch (err) {
+        console.error('Failed to fetch property types:', err)
+      }
+    }
+    fetchPropertyTypes()
+  }, [])
 
-    if (
-      searchTermFromUrl ||
-      typeFromUrl ||
-      parkingFromUrl ||
-      furnishedFromUrl ||
-      offerFromUrl ||
-      sortFromUrl ||
-      orderFromUrl
-    ) {
-      setSidebarData({
-        searchTerm: searchTermFromUrl || '',
-        type: typeFromUrl || 'all',
-        parking: parkingFromUrl === "true",
-        furnished: furnishedFromUrl === "true",
-        offer: offerFromUrl === "true",
-        sort: sortFromUrl || 'createdAt',
-        order: orderFromUrl || 'desc',
-      });
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      const urlParms = new URLSearchParams(location.search)
+
+      const searchTerm = urlParms.get('searchTerm')
+      if (searchTerm) {
+        try {
+          const geoRes = await fetch(
+            apiUrl(
+              `/api/listing/geocodeAddress?address=${encodeURIComponent(
+                searchTerm
+              )}`
+            )
+          )
+          const geoData = await geoRes.json()
+          if (geoData.success && geoData.coordinates) {
+            urlParms.set('lat', geoData.coordinates.lat)
+            urlParms.set('lng', geoData.coordinates.lng)
+          }
+        } catch (err) {
+          console.error('Geocoding failed:', err)
+        }
+      }
+
+      try {
+        const res = await fetch(
+          apiUrl(`/api/listing/get?${urlParms.toString()}`)
+        )
+        const data = await res.json()
+        setListings(data)
+        setShowMore(data.length > 8)
+      } catch (err) {
+        console.error('Failed to fetch listings:', err)
+      }
+
+      setLoading(false)
     }
 
-    const fetchListings = async () => {
-      setLoading(true);
-      const searchQuery = urlParms.toString();
-      const res = await fetch(apiUrl(`/api/listing/get?${searchQuery}`));
-      const data = await res.json();
-      setShowMore(data.length > 8);
-      setListings(data);
-      setLoading(false);
-    };
+    const urlParms = new URLSearchParams(location.search)
+    const get = (key, fallback = '') => urlParms.get(key) || fallback
+    setSidebarData({
+      searchTerm: get('searchTerm'),
+      type: get('type', 'all'),
+      propertyType: get('propertyType', 'all'),
+      minPrice: get('minPrice'),
+      maxPrice: get('maxPrice'),
+      parking: get('parking') === 'true',
+      furnished: get('furnished') === 'true',
+      offer: get('offer') === 'true',
+      sort: get('sort', 'createdAt'),
+      order: get('order', 'desc'),
+    })
 
-    fetchListings();
-  }, [location.search]);
+    fetchData()
+  }, [location.search])
 
   const handleChange = (e) => {
-    if (e.target.id === 'all' || e.target.id === 'rent' || e.target.id === 'sale') {
-      setSidebarData((prev) => ({ ...prev, type: e.target.id }));
+    const { id, value, checked } = e.target
+    if (['all', 'rent', 'sale'].includes(id)) {
+      setSidebarData((prev) => ({ ...prev, type: id }))
+    } else if (id === 'propertyType') {
+      setSidebarData((prev) => ({ ...prev, propertyType: value }))
+    } else if (['minPrice', 'maxPrice', 'searchTerm'].includes(id)) {
+      setSidebarData((prev) => ({ ...prev, [id]: value }))
+    } else if (['parking', 'furnished', 'offer'].includes(id)) {
+      setSidebarData((prev) => ({ ...prev, [id]: checked }))
+    } else if (id === 'sort_order') {
+      const [sort, order] = value.split('_')
+      setSidebarData((prev) => ({ ...prev, sort, order }))
     }
-
-    if (e.target.id === 'searchTerm') {
-      setSidebarData((prev) => ({ ...prev, searchTerm: e.target.value }));
-    }
-
-    if (e.target.id === 'parking' || e.target.id === 'furnished' || e.target.id === 'offer') {
-      setSidebarData((prev) => ({ ...prev, [e.target.id]: e.target.checked }));
-    }
-
-    if (e.target.id === 'sort_order') {
-      const sort = e.target.value.split('_')[0] || 'createdAt';
-      const order = e.target.value.split('_')[1] || 'desc';
-      setSidebarData((prev) => ({ ...prev, sort, order }));
-    }
-  };
+  }
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    const urlParams = new URLSearchParams();
-    urlParams.set('searchTerm', sidebardata.searchTerm);
-    urlParams.set('type', sidebardata.type);
-    urlParams.set('parking', sidebardata.parking);
-    urlParams.set('furnished', sidebardata.furnished);
-    urlParams.set('offer', sidebardata.offer);
-    urlParams.set('sort', sidebardata.sort);
-    urlParams.set('order', sidebardata.order);
-    const searchQuery = urlParams.toString();
-    navigate(`/search?${searchQuery}`);
-  };
+    e.preventDefault()
+    const urlParams = new URLSearchParams()
+    Object.entries(sidebardata).forEach(([key, value]) => {
+      if (value !== '' && value !== 'all') urlParams.set(key, value)
+    })
+    // Hide map when doing normal search
+    setShowMap(false)
+    navigate(`/search?${urlParams.toString()}`)
+  }
+
+  const handleGeocodeSearch = async () => {
+    if (!sidebardata.searchTerm.trim()) return
+    setGeocodeLoading(true)
+    try {
+      const res = await fetch(
+        apiUrl(
+          `/api/listing/geocodeAddress?address=${encodeURIComponent(
+            sidebardata.searchTerm
+          )}`
+        )
+      )
+      const data = await res.json()
+      if (data.success && data.coordinates) {
+        const { lat, lng } = data.coordinates
+
+        // Set map center and search location
+        setMapCenter([lat, lng])
+        setSearchLocation({
+          lat,
+          lng,
+          address: sidebardata.searchTerm,
+        })
+        setShowMap(true)
+
+        // Fetch nearby listings
+        const nearbyRes = await fetch(
+          apiUrl(`/api/listing/nearby?lat=${lat}&lng=${lng}&radius=3`)
+        )
+        const listingsData = await nearbyRes.json()
+        setListings(listingsData)
+        setShowMore(false)
+      } else {
+        console.warn('No results from geocoding')
+      }
+    } catch (error) {
+      console.error('Error searching for location:', error)
+    } finally {
+      setGeocodeLoading(false)
+    }
+  }
 
   const ShowMore = async () => {
-    const numberOfListings = listings.length;
-    const startIndex = numberOfListings;
-    const urlParams = new URLSearchParams(location.search);
-    urlParams.set('startIndex', startIndex);
-    urlParams.set('limit', 9);
-    const searchQuery = urlParams.toString();
-    const res = await fetch(apiUrl(`/api/listing/get?${searchQuery}`), {
-      credentials: 'include',
-    });
-    const data = await res.json();
-    if (data.length < 9) {
-      setShowMore(false);
-    }
-    setListings((prev) => [...prev, ...data]);
-  };
+    const numberOfListings = listings.length
+    const urlParams = new URLSearchParams(location.search)
+    urlParams.set('startIndex', numberOfListings)
+    urlParams.set('limit', 9)
+    const res = await fetch(apiUrl(`/api/listing/get?${urlParams.toString()}`))
+    const data = await res.json()
+    if (data.length < 9) setShowMore(false)
+    setListings((prev) => [...prev, ...data])
+  }
 
   return (
     <div className='flex flex-col md:flex-row'>
-      {/* Sidebar */}
-      <div className='p-5 border-b-2 md:border-r-2 md:min-h-screen w-[90vw] sm:w-[300px] md:w-[360px] md:ml-2'>
-
+      <div className='bg-slate-200 p-5 border-r md:min-h-screen w-full sm:w-[300px] md:w-[360px]'>
         <form onSubmit={handleSubmit} className='flex flex-col gap-8'>
-          <div className='flex items-center gap-2'>
-            <label className='whitespace-nowrap font-semibold'>Search Term:</label>
+          <div>
+            <label className='whitespace-nowrap font-semibold'>
+              🔍 Search Term
+            </label>
             <input
-              type="text"
-              id="searchTerm"
-              name="searchTerm"
-              placeholder="Search..."
-              className="bg-slate-400 p-3 rounded-lg w-full"
-              value={sidebardata.searchTerm}
+              id='searchTerm'
               onChange={handleChange}
+              value={sidebardata.searchTerm}
+              placeholder='Enter address, city, or area'
+              className='bg-slate-400 p-3 rounded-lg w-full'
             />
           </div>
 
           <div className='flex gap-2 flex-wrap items-center'>
             <label className='font-semibold'>Type:</label>
-            {['all', 'rent', 'sale'].map((type) => (
-              <div key={type} className='flex items-center gap-2'>
-                <input
-                  type="radio"
-                  id={type}
-                  className="w-5"
-                  onChange={handleChange}
-                  checked={sidebardata.type === type}
-                />
-                <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
-              </div>
-            ))}
+            <div className='flex gap-4'>
+              {['all', 'rent', 'sale'].map((opt) => (
+                <label
+                  key={opt}
+                  className='flex items-center gap-1 text-gray-600'
+                >
+                  <input
+                    type='radio'
+                    id={opt}
+                    checked={sidebardata.type === opt}
+                    onChange={handleChange}
+                  />
+                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                </label>
+              ))}
+            </div>
           </div>
 
-          <div className='flex gap-2 flex-wrap items-center'>
-            <label className='font-semibold'>Amenities:</label>
-            {['parking', 'furnished', 'offer'].map((feature) => (
-              <div key={feature} className='flex items-center gap-2'>
-                <input
-                  type="checkbox"
-                  id={feature}
-                  className="w-5"
-                  onChange={handleChange}
-                  checked={sidebardata[feature]}
-                />
-                <span>{feature.charAt(0).toUpperCase() + feature.slice(1)}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className='flex items-center gap-2'>
-            <label className='font-semibold'>Sort:</label>
-            <select
-              onChange={handleChange}
-              defaultValue={'createdAt_desc'}
-              name="sort"
-              id="sort_order"
-              className="bg-slate-400 rounded-lg p-3"
+          <div>
+            <label
+              htmlFor='propertyType'
+              className='font-semibold text-gray-700 block mb-1'
             >
-              <option value="createdAt_desc">Latest</option>
-              <option value="createdAt_asc">Oldest</option>
-              <option value="regularPrice_asc">Price: Low to High</option>
-              <option value="regularPrice_desc">Price: High to Low</option>
+              🏠 Property Type
+            </label>
+            <select
+              id='propertyType'
+              onChange={handleChange}
+              value={sidebardata.propertyType}
+              className='bg-slate-400 p-3 rounded-lg w-full'
+            >
+              <option value='all'>All Types</option>
+              {propertyTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
             </select>
           </div>
 
-          <button className='bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-90'>
+          <div>
+            <label className='font-semibold text-gray-700 block mb-1'>
+              💰 Price Range
+            </label>
+            <div className='flex gap-2'>
+              <input
+                type='number'
+                id='minPrice'
+                placeholder='Min'
+                onChange={handleChange}
+                value={sidebardata.minPrice}
+                className='bg-slate-400 p-3 rounded-lg w-full'
+              />
+              <input
+                type='number'
+                id='maxPrice'
+                placeholder='Max'
+                onChange={handleChange}
+                value={sidebardata.maxPrice}
+                className='bg-slate-400 p-3 rounded-lg w-full'
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className='font-semibold text-gray-700 mb-1'>🛠️ Amenities</p>
+            {['parking', 'furnished', 'offer'].map((key) => (
+              <label key={key} className='block text-gray-800'>
+                <input
+                  type='radio'
+                  id={key}
+                  checked={sidebardata[key]}
+                  onChange={handleChange}
+                  className='mr-2'
+                />
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </label>
+            ))}
+          </div>
+
+          <div>
+            <label
+              htmlFor='sort_order'
+              className='font-semibold text-gray-700 block mb-1'
+            >
+              🔃 Sort By
+            </label>
+            <select
+              id='sort_order'
+              onChange={handleChange}
+              value={`${sidebardata.sort}_${sidebardata.order}`}
+              className='bg-slate-400 p-3 rounded-lg w-full'
+            >
+              <option value='createdAt_desc'>Newest</option>
+              <option value='createdAt_asc'>Oldest</option>
+              <option value='regularPrice_asc'>Price: Low → High</option>
+              <option value='regularPrice_desc'>Price: High → Low</option>
+            </select>
+          </div>
+
+          <button className='bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-90 font-semibold transition-all'>
             Search
           </button>
+
+          <div className='border-t pt-4'>
+            <div className='flex flex-col gap-3'>
+              <label className='font-semibold'>📍 Area Search</label>
+              <p className='text-sm text-gray-600'>
+                Enter a neighborhood or zone and click below to show listings
+                near that location.
+              </p>
+              <button
+                type='button'
+                onClick={handleGeocodeSearch}
+                disabled={geocodeLoading || !sidebardata.searchTerm.trim()}
+                className='bg-blue-600 text-white p-3 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all'
+              >
+                {geocodeLoading ? 'Searching...' : 'Search Area on Map'}
+              </button>
+            </div>
+          </div>
         </form>
       </div>
 
-      {/* Listings */}
       <div className='flex-1'>
-        <h1 className='text-3xl font-semibold border-b p-3 text-slate-700 mt-5 '>Listing result:</h1>
+        <h1 className='text-3xl font-bold p-4 text-slate-700'>
+          Listing Results:
+        </h1>
 
-        <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-5 gap-y-8 px-6 mt-6 auto-rows-fr'>
-          {!loading && listings.length === 0 && (
-            <p className='text-2xl font-semibold text-slate-700 p-2 col-span-full'>No listings found</p>
-          )}
-
-          {loading && (
-            <p className='text-center text-2xl font-semibold text-slate-700 col-span-full'>Loading...</p>
-          )}
-
-          {!loading && listings.map((listing) => (
-            <div key={listing._id} className='h-full flex flex-col'>
-
-              <ListingItem key={listing._id} listing={listing} />
+        {showMap && (
+          <div className='px-4 pb-4'>
+            <div className='mb-4 flex justify-between items-center'>
+              <h2 className='text-xl font-semibold text-slate-700'>
+                📍 Map View - {searchLocation?.address}
+              </h2>
+              <button
+                onClick={() => setShowMap(false)}
+                className='text-gray-500 hover:text-gray-700 text-sm underline'
+              >
+                Hide Map
+              </button>
             </div>
-          ))}
-        </div>
+            <PropertyMap
+              center={mapCenter}
+              listings={listings}
+              searchLocation={searchLocation}
+            />
+          </div>
+        )}
 
-        {/* Show More Button */}
-        {!loading && showMore && (
-          <div className='flex justify-center mt-6 mb-10'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-4'>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            listings.map((l) => <ListingItem key={l._id} listing={l} />)
+          )}
+        </div>
+        {showMore && (
+          <div className='text-center mt-4 mb-10'>
             <button
-              className='text-green-700 hover:underline p-3 text-lg'
               onClick={ShowMore}
+              className='text-blue-600 underline text-lg'
             >
               Show More
             </button>
@@ -224,5 +368,5 @@ export default function Search() {
         )}
       </div>
     </div>
-  );
+  )
 }

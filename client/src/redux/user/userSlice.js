@@ -1,6 +1,6 @@
 //cilent/src/redux/user/userSlice.js
 
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit'
 
 const initialState = {
   currentUser: null,
@@ -8,107 +8,121 @@ const initialState = {
   token: null,
   loading: false,
   error: null,
-};
+}
 
 const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
+    // 🔐 Sign In
     signInStart: (state) => {
-      state.loading = true;
-      state.error = null;
+      state.loading = true
+      state.error = null
     },
     signInSuccess: (state, action) => {
-      state.loading = false;
-      state.currentUser = action.payload.user;
-      state.token = action.payload.token;
-      state.isLoggedIn = true;
+      state.loading = false
+      state.currentUser = {
+        ...action.payload.user,
+        token: action.payload.token, // 📌 för bakåtkompatibilitet
+      }
+      state.token = action.payload.token
+      state.isLoggedIn = true
     },
     signInFailure: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
+      state.loading = false
+      state.error = action.payload
     },
-    logout: (state) => {
-      state.currentUser = null;
-      state.isLoggedIn = false;
-      state.token = null;
-    },
-    updateUserStart: (state) => {
-      state.loading = true;
-      state.error = null;
-    },
-    updateUserSuccess: (state, action) => {
-      state.loading = false;
-      state.currentUser = action.payload.user;
-    },
-    updateUserFailure: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
-    deleteUserStart: (state) => {
-      state.loading = true;
-      state.error = null;
-    },
-    deleteUserSuccess: (state) => {
-      state.loading = false;
-      state.currentUser = null;
-      state.isLoggedIn = false;
-      state.token = null;
-    },
-    deleteUserFailure: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
+
+    // 🚪 Sign Out / Logout
     signOutUserStart: (state) => {
-      state.loading = true;
-      state.error = null;
+      state.loading = true
+      state.error = null
     },
     signOutUserSuccess: (state) => {
-      state.loading = false;
-      state.currentUser = null;
-      state.isLoggedIn = false;
-      state.token = null;
+      state.loading = false
+      state.currentUser = null
+      state.isLoggedIn = false
+      state.token = null
     },
     signOutUserFailure: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
+      state.loading = false
+      state.error = action.payload
     },
+    logout: (state) => {
+      state.currentUser = null
+      state.isLoggedIn = false
+      state.token = null
+    },
+
+    // ✏️ Update User
+    updateUserStart: (state) => {
+      state.loading = true
+      state.error = null
+    },
+    updateUserSuccess: (state, action) => {
+      state.loading = false
+      state.currentUser = action.payload.user
+    },
+    updateUserFailure: (state, action) => {
+      state.loading = false
+      state.error = action.payload
+    },
+
+    // ❌ Delete User
+    deleteUserStart: (state) => {
+      state.loading = true
+      state.error = null
+    },
+    deleteUserSuccess: (state) => {
+      state.loading = false
+      state.currentUser = null
+      state.isLoggedIn = false
+      state.token = null
+    },
+    deleteUserFailure: (state, action) => {
+      state.loading = false
+      state.error = action.payload
+    },
+
+    // 🆕 Direkt sätt användaren (t.ex. efter att ha ändrat favoriter)
     setUser: (state, action) => {
-      state.currentUser = action.payload;
-      state.token = action.payload.token;
-      state.isLoggedIn = true;
+      state.currentUser = action.payload
     },
 
-    // ✅ NY reducer för att toggle-favorit lokalt
+    // ⭐ Update User Favorites
     updateUserFavorites: (state, action) => {
-      const listingId = action.payload;
-      const favorites = state.currentUser?.favorites || [];
-
-      if (favorites.includes(listingId)) {
-        state.currentUser.favorites = favorites.filter(id => id !== listingId);
-      } else {
-        state.currentUser.favorites = [...favorites, listingId];
+      const listingId = action.payload
+      if (state.currentUser && state.currentUser.favorites) {
+        const favorites = state.currentUser.favorites
+        const index = favorites.indexOf(listingId)
+        if (index > -1) {
+          // Remove from favorites
+          favorites.splice(index, 1)
+        } else {
+          // Add to favorites
+          favorites.push(listingId)
+        }
       }
     },
   },
-});
+})
 
 export const {
   signInStart,
   signInSuccess,
   signInFailure,
-  logout,
-  updateUserFailure,
-  updateUserStart,
-  updateUserSuccess,
-  deleteUserFailure,
-  deleteUserStart,
-  deleteUserSuccess,
   signOutUserStart,
   signOutUserSuccess,
   signOutUserFailure,
+  logout,
+  updateUserStart,
+  updateUserSuccess,
+  updateUserFailure,
+  deleteUserStart,
+  deleteUserSuccess,
+  deleteUserFailure,
   setUser,
-  updateUserFavorites, // ⬅️ exportera denna också!
-} = userSlice.actions;
+  updateUserFavorites,
+} = userSlice.actions
 
-export default userSlice.reducer;
+export default userSlice.reducer

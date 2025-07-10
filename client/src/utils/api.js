@@ -15,4 +15,7 @@ export const apiUrl = (path) => {
 }
 
 // Export API_BASE for files that need the base URL directly
-export const API_BASE = isDevelopment ? '' : import.meta.env.VITE_API_BASE_URL
+export const API_BASE = isDevelopment ? '' : import.meta.env.VITE_API_BASE_URL 
+
+
+

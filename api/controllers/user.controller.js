@@ -114,10 +114,16 @@ export const getUserListing = async (req, res, next) => {
 
 export const getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).populate('favorites'); 
+       
+    // Check if the user is trying to access their own account
+    if (req.user.id !== req.params.id && !req.user.role !== 'Admin') {
+      return next(errorHandler(403, "You can only access your own account!"));
+    }
+
+    const user = await User.findById(req.params.id)
     if (!user) return next(errorHandler(404, 'User not found!'));
 
-    const { password, ...rest } = user._doc;
+    const { password: pass, ...rest } = user._doc;
 
     res.status(200).json(rest);
   } catch (error) {
@@ -131,22 +137,22 @@ export const getUser = async (req, res, next) => {
 export const favoriteToggle = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
+    const listingId = req.params.listingId;
     if (!user) return res.status(404).json({ message: "Användare hittades inte" });
 
-    const listingId = req.params.listingId.toString();
 
-    const index = user.favorites.findIndex((id) => id.toString() === listingId);
+    const index = user.favorites.indexOf(listingId);
 
-    if (index !== -1) {
-      user.favorites.splice(index, 1);
-    } else {
+    if (index === -1) {
       user.favorites.push(listingId);
+    } else {
+      user.favorites.splice(index, 1);
     }
 
     await user.save();
     res.status(200).json({ favorites: user.favorites });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message})
   }
 };
 
