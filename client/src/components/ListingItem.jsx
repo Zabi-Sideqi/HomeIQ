@@ -4,6 +4,7 @@ import { MdLocationOn } from 'react-icons/md'
 import axios from 'axios'
 import { useSelector, useDispatch } from 'react-redux'
 import { updateUserFavorites } from '../redux/user/userSlice' // ny, specifik action
+import { apiUrl } from '../utils/api'
 
 export default function ListingItem({ listing, onFavoriteChange }) {
   const dispatch = useDispatch()
@@ -21,9 +22,9 @@ export default function ListingItem({ listing, onFavoriteChange }) {
       // Optimistisk uppdatering i UI (kan kombineras med toasts i framtiden)
       dispatch(updateUserFavorites(listing._id)) // lokal Redux-uppdatering först
 
-      // Use Vite proxy for local development instead of direct API URL
+      // Use apiUrl for proper API routing in both development and production
       await axios.put(
-        `/api/user/favorites/${listing._id}`,
+        apiUrl(`/api/user/favorites/${listing._id}`),
         undefined,
         {
           headers: {
