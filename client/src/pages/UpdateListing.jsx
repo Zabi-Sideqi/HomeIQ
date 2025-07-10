@@ -12,6 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { useSelector } from 'react-redux'
+import { apiUrl } from '../utils/api'
 
 export default function UpdateListing() {
   const { currentUser } = useSelector((state) => state.user)
@@ -47,7 +48,7 @@ export default function UpdateListing() {
 
   useEffect(() => {
     const fetchListing = async () => {
-      const res = await fetch(`/api/listing/get/${params.listingId}`)
+      const res = await fetch(apiUrl(`/api/listing/get/${params.listingId}`))
       const data = await res.json()
       if (data.success === false) {
         toast.error(data.message)
@@ -173,7 +174,7 @@ export default function UpdateListing() {
         await geocodeAddress()
       }
 
-      const res = await fetch(`/api/listing/update/${params.listingId}`, {
+      const res = await fetch(apiUrl(`/api/listing/update/${params.listingId}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, userRef: currentUser._id }),
@@ -185,7 +186,7 @@ export default function UpdateListing() {
       }
 
       if (removedImages.length > 0) {
-        await fetch(`/api/listing/delete-images/${params.listingId}`, {
+        await fetch(apiUrl(`/api/listing/delete-images/${params.listingId}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrls: removedImages }),
