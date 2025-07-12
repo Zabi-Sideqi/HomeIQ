@@ -1,6 +1,7 @@
 //api/controllers/listing.controller.js
 
 import Listing from '../models/listing.model.js'
+import User from '../models/user.model.js'
 import { errorHandler } from '../utils/error.js'
 import fetch from 'node-fetch'
 import dotenv from 'dotenv'
@@ -30,7 +31,12 @@ export const deleteListing = async (req, res, next) => {
     return next(errorHandler(404, 'Listing not found'))
   }
 
-  if (listing.userRef !== req.user.id) {
+  // Check if user is admin or owner
+  const user = await User.findById(req.user.id)
+  const isAdmin = user && user.role === 'admin'
+  const isOwner = listing.userRef === req.user.id
+
+  if (!isAdmin && !isOwner) {
     return next(errorHandler(401, 'You can only delete your own listings'))
   }
 
@@ -52,7 +58,12 @@ export const deleteListingImages = async (req, res, next) => {
       return next(errorHandler(404, 'Listing not found'))
     }
 
-    if (listing.userRef !== req.user.id) {
+    // Check if user is admin or owner
+    const user = await User.findById(req.user.id)
+    const isAdmin = user && user.role === 'admin'
+    const isOwner = listing.userRef === req.user.id
+
+    if (!isAdmin && !isOwner) {
       return next(errorHandler(401, 'You can only modify your own listings'))
     }
 
@@ -77,7 +88,12 @@ export const updateListing = async (req, res, next) => {
     return next(errorHandler(404, 'Listing not found'))
   }
 
-  if (listing.userRef !== req.user.id) {
+  // Check if user is admin or owner
+  const user = await User.findById(req.user.id)
+  const isAdmin = user && user.role === 'admin'
+  const isOwner = listing.userRef === req.user.id
+
+  if (!isAdmin && !isOwner) {
     return next(errorHandler(401, 'You can only update your own listings'))
   }
 

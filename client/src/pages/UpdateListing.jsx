@@ -63,14 +63,14 @@ export default function UpdateListing() {
           toast.error(data.message)
           return
         }
-        
+
         // Check if current user owns this listing
         if (data.userRef !== currentUser?._id) {
           toast.error('You can only edit your own listings.')
           navigate('/profile')
           return
         }
-        
+
         setFormData(data)
       } catch (err) {
         console.error('Error fetching listing:', err)
@@ -78,7 +78,7 @@ export default function UpdateListing() {
         navigate('/profile')
       }
     }
-    
+
     if (currentUser && params.listingId) {
       fetchListing()
     }
@@ -107,7 +107,11 @@ export default function UpdateListing() {
       const fullAddress =
         `${formData.address}, ${formData.location.city}, ${formData.location.postcode}`.trim()
       const response = await fetch(
-        apiUrl(`/api/listing/geocodeAddress?address=${encodeURIComponent(fullAddress)}`)
+        apiUrl(
+          `/api/listing/geocodeAddress?address=${encodeURIComponent(
+            fullAddress
+          )}`
+        )
       )
       const data = await response.json()
 
@@ -210,7 +214,7 @@ export default function UpdateListing() {
         apiUrl(`/api/listing/update/${params.listingId}`),
         {
           method: 'PUT',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
@@ -226,7 +230,7 @@ export default function UpdateListing() {
       if (removedImages.length > 0) {
         await fetch(apiUrl(`/api/listing/delete-images/${params.listingId}`), {
           method: 'PUT',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },

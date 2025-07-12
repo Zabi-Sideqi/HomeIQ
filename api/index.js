@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import userRoute from './routes/user.route.js'
 import authRoute from './routes/auth.route.js'
 import listingRoute from './routes/listing.route.js'
+import adminRoute from './routes/admin.route.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 
@@ -110,6 +111,7 @@ app.use((req, res, next) => {
 app.use('/api/user', userRoute)
 app.use('/api/auth', authRoute)
 app.use('/api/listing', listingRoute)
+app.use('/api/admin', adminRoute)
 
 // Global error handler (MÅSTE ligga efter routes)
 app.use((err, req, res, next) => {
