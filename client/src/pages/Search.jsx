@@ -347,20 +347,20 @@ export default function Search() {
 
           <div>
             <label
-              htmlFor='propertyType'
-              className='font-semibold text-gray-700 block mb-1'
+               htmlFor='propertyType'
+               className='font-semibold text-gray-700 block mb-1'
             >
-              🏠 Property Type
+                🏠 Property Type
             </label>
             <select
-              id='propertyType'
-              onChange={handleChange}
-              value={sidebardata.propertyType}
-              className='bg-slate-400 p-3 rounded-lg w-full'
+                 id='propertyType'
+                  onChange={handleChange}
+                   value={sidebardata.propertyType}
+                    className='bg-slate-400 p-3 rounded-lg w-full'
             >
               <option value='all'>All Types</option>
-              {propertyTypes.map((type) => (
-                <option key={type} value={type}>
+                  {propertyTypes.map((type) => (
+              <option key={type} value={type}>
                   {type}
                 </option>
               ))}
@@ -394,38 +394,39 @@ export default function Search() {
               />
             </div>
           </div> */}
-          <div>
-  <label htmlFor='minBedrooms' className='font-semibold text-gray-700 block mb-1'>
-    🛏️ Min Bedrooms
-  </label>
-  <input
-    type='number'
-    id='minBedrooms'
-    name='minBedrooms'
-    placeholder='Min'
-    onChange={handleChange}
-    value={sidebardata.minBedrooms}
-    className='bg-slate-400 p-3 rounded-lg w-full'
-    min='0'
-  />
-</div>
+          <div className='flex gap-4'>
+            <div className='flex-1'>
+              <label htmlFor='minBedrooms' className='font-semibold text-gray-700 block mb-1'>
+                🛏️ Min Bedrooms
+              </label>
+              <input
+                type='number'
+                id='minBedrooms'
+                name='minBedrooms'
+                placeholder='Min'
+                onChange={handleChange}
+                value={sidebardata.minBedrooms}
+                className='bg-slate-400 p-3 rounded-lg w-full'
+                min='0'
+              />
+            </div>
 
-<div>
-  <label htmlFor='maxBedrooms' className='font-semibold text-gray-700 block mb-1'>
-    🛏️ Max Bedrooms
-  </label>
-  <input
-    type='number'
-    id='maxBedrooms'
-    name='maxBedrooms'
-    placeholder='Max'
-    onChange={handleChange}
-    value={sidebardata.maxBedrooms}
-    className='bg-slate-400 p-3 rounded-lg w-full'
-    min='0'
-  />
-</div>
-
+            <div className='flex-1'>
+              <label htmlFor='maxBedrooms' className='font-semibold text-gray-700 block mb-1'>
+                🛏️ Max Bedrooms
+              </label>
+              <input
+                type='number'
+                id='maxBedrooms'
+                name='maxBedrooms'
+                placeholder='Max'
+                onChange={handleChange}
+                value={sidebardata.maxBedrooms}
+                className='bg-slate-400 p-3 rounded-lg w-full'
+                min='0'
+              />
+            </div>
+          </div>
 
           <div>
             <label className='font-semibold text-gray-700 block mb-1'>
