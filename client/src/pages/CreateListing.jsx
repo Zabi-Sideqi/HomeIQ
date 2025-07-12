@@ -1,13 +1,14 @@
 //client/src/pages/CreateListing.jsx
 
 import React, { useState } from 'react'
-import {
+import { uploadImage } from '../utils/uploadImage'
+/* import {
   getStorage,
   ref,
   uploadBytesResumable,
   getDownloadURL,
-} from 'firebase/storage'
-import { app } from '../firebase'
+} from 'firebase/storage' */
+/* import { app } from '../firebase' */
 import { useNavigate } from 'react-router-dom'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -19,6 +20,7 @@ export default function CreateListing() {
   const [files, setFiles] = useState([])
   const [formData, setFormData] = useState({
     imageUrls: [],
+    thumbnailUrls: [],
     name: '',
     description: '',
     address: '',
@@ -78,7 +80,7 @@ export default function CreateListing() {
     }
   }
 
-  const storeImage = async (file) => {
+/*   const storeImage = async (file) => {
     return new Promise((resolve, reject) => {
       const storage = getStorage(app)
       const fileName = new Date().getTime() + file.name
@@ -103,7 +105,26 @@ export default function CreateListing() {
         }
       )
     })
+  } */
+
+    const storeImage = async (file) => {
+  try {
+    const { imageUrl, thumbnailUrl } = await uploadImage(file);
+
+    setFormData((prev) => ({
+      ...prev,
+      thumbnailUrls: prev.thumbnailUrls
+        ? [...prev.thumbnailUrls, thumbnailUrl]
+        : [thumbnailUrl],
+    }));
+
+    return imageUrl;
+  } catch (err) {
+    console.error("Image upload failed:", err);
+    throw err;
   }
+};
+
 
   const geocodeAddress = async () => {
     try {

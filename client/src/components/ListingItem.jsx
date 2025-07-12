@@ -83,11 +83,15 @@ export default function ListingItem({ listing, onFavoriteChange }) {
     <div className='bg-white shadow-md hover:shadow-lg transition-shadow overflow-hidden rounded-lg w-full sm:w-[330px]'>
       <div className='relative'>
         <Link to={`/listing/${listing._id}`}>
-          <img
-            src={listing.imageUrls[0]}
-            alt='listing cover'
-            className='h-[320px] sm:h-[220px] w-full object-cover hover:scale-105 duration-300'
-          />
+         <img
+          src={listing.thumbnailUrls ? listing.thumbnailUrls[0] : listing.imageUrls[0]}
+          loading="lazy"
+          alt="listing cover"
+          width="400"
+          height="300"
+          className="h-[320px] sm:h-[220px] w-full object-cover hover:scale-105 duration-300"
+         />
+
         </Link>
 
         {token && (
