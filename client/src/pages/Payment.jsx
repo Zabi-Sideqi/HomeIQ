@@ -36,6 +36,91 @@ const PaymentForm = () => {
   // Get payment details from navigation state
   const { type, subscriptionType } = location.state || {}
 
+  const createPaymentIntent = useCallback(
+    async (planType) => {
+      try {
+        console.log('Creating payment intent for planType:', planType, 'type:', type)
+        const endpoint =
+          type === 'subscription'
+            ? '/api/payment/intent/subscription'
+            : '/api/payment/intent/listing'
+
+        const body =
+          type === 'subscription'
+            ? { subscriptionType: planType }
+            : { additionalListings: 1 }
+
+        console.log('Payment intent request:', { endpoint, body })
+
+        const response = await fetch(apiUrl(endpoint), {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        })
+
+        const data = await response.json()
+        console.log('Payment intent response:', data)
+        if (data.success) {
+          setPaymentIntent(data)
+        } else {
+          console.error('Payment intent creation failed:', data)
+          if (data.message === 'Please set up payment method first') {
+            // Redirect to setup payment page
+            toast.error('You need to add a payment method first')
+            setTimeout(() => {
+              navigate('/setup-payment', {
+                state: {
+                  user: currentUser,
+                  token: token,
+                  returnTo: '/payment',
+                  returnState: { type, subscriptionType }
+                }
+              })
+            }, 1500)
+          } else {
+            setError(data.message || 'Error creating payment intent')
+          }
+        }
+      } catch (error) {
+        console.error('Payment intent error:', error)
+        setError('Error setting up payment. Please try again.')
+      }
+    },
+    [type, token, currentUser, navigate, subscriptionType]
+  )
+
+  const fetchPricing = useCallback(async () => {
+    try {
+      console.log('Fetching pricing data...')
+      const response = await fetch(apiUrl('/api/payment/pricing'))
+      const data = await response.json()
+      console.log('Pricing response:', data)
+      if (data.success) {
+        setPricing(data.pricing)
+        console.log('Pricing set, type:', type, 'subscriptionType:', subscriptionType)
+        if (type === 'subscription' && subscriptionType) {
+          console.log('Creating payment intent for subscription:', subscriptionType)
+          createPaymentIntent(subscriptionType)
+        } else if (type === 'listing') {
+          console.log('Creating payment intent for additional listing')
+          createPaymentIntent('additional')
+        } else {
+          console.log('No payment intent created - missing type or subscriptionType')
+        }
+      } else {
+        console.error('Pricing fetch failed:', data)
+        setError('Error loading pricing data')
+      }
+    } catch (error) {
+      console.error('Pricing fetch error:', error)
+      setError('Error loading pricing. Please try again.')
+    }
+  }, [type, subscriptionType, createPaymentIntent])
+
   useEffect(() => {
     if (!currentUser || !token) {
       navigate('/sign-in')
@@ -49,59 +134,6 @@ const PaymentForm = () => {
 
     fetchPricing()
   }, [currentUser, token, type, navigate, fetchPricing])
-
-  const createPaymentIntent = useCallback(
-    async (planType) => {
-      try {
-        const endpoint =
-          type === 'subscription'
-            ? '/api/payment/intent/subscription'
-            : '/api/payment/intent/listing'
-
-        const body =
-          type === 'subscription'
-            ? { subscriptionType: planType }
-            : { additionalListings: 1 }
-
-        const response = await fetch(apiUrl(endpoint), {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(body),
-        })
-
-        const data = await response.json()
-        if (data.success) {
-          setPaymentIntent(data)
-        } else {
-          setError(data.message || 'Error creating payment intent')
-        }
-      } catch (error) {
-        console.error('Payment intent error:', error)
-        setError('Error setting up payment. Please try again.')
-      }
-    },
-    [type, token]
-  )
-
-  const fetchPricing = useCallback(async () => {
-    try {
-      const response = await fetch(apiUrl('/api/payment/pricing'))
-      const data = await response.json()
-      if (data.success) {
-        setPricing(data.pricing)
-        if (type === 'subscription' && subscriptionType) {
-          createPaymentIntent(subscriptionType)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching pricing:', error)
-      setError('Error loading pricing information')
-    }
-  }, [type, subscriptionType, createPaymentIntent])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

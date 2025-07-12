@@ -10,14 +10,25 @@ import Stripe from 'stripe'
 import dotenv from 'dotenv'
 
 dotenv.config()
+
+// Validate Stripe configuration
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('STRIPE_SECRET_KEY not found in environment variables')
+} else {
+  console.log('Stripe secret key configured:', process.env.STRIPE_SECRET_KEY.substring(0, 7) + '...')
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export const signup = async (req, res, next) => {
   try {
     const { email, password, username, paymentMethodId } = req.body
 
+    console.log('Signup request received:', { email, username, paymentMethodId: paymentMethodId ? 'present' : 'missing' })
+
     // Validate required fields
     if (!email || !password || !paymentMethodId) {
+      console.log('Missing required fields:', { email: !!email, password: !!password, paymentMethodId: !!paymentMethodId })
       return next(
         errorHandler(400, 'Email, password, and payment method are required')
       )
@@ -36,7 +47,8 @@ export const signup = async (req, res, next) => {
       return next(errorHandler(409, 'User already exists'))
     }
 
-    // Create Stripe customer first
+    // Create Stripe customer and attach payment method
+    console.log('Creating Stripe customer for:', email)
     const customer = await stripe.customers.create({
       email,
       name: username || 'User',
@@ -44,11 +56,14 @@ export const signup = async (req, res, next) => {
         registrationDate: new Date().toISOString(),
       },
     })
+    console.log('Stripe customer created:', customer.id)
 
-    // Attach payment method to customer
+    // Attach the payment method to the customer
+    console.log('Attaching payment method:', paymentMethodId)
     await stripe.paymentMethods.attach(paymentMethodId, {
       customer: customer.id,
     })
+    console.log('Payment method attached successfully')
 
     // Set as default payment method
     await stripe.customers.update(customer.id, {
@@ -84,23 +99,50 @@ export const signup = async (req, res, next) => {
       user: userResponse,
     })
   } catch (error) {
-    console.error('Signup error:', error)
+    console.error('Signup error details:', {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      statusCode: error.statusCode,
+      stack: error.stack
+    })
+
+    // Handle MongoDB duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0]
+      if (field === 'email') {
+        return next(errorHandler(409, 'An account with this email already exists'))
+      } else if (field === 'username') {
+        return next(errorHandler(409, 'This username is already taken. Please choose a different username.'))
+      }
+      return next(errorHandler(409, 'This information is already in use'))
+    }
 
     // Handle Stripe-specific errors
     if (error.type) {
       switch (error.type) {
         case 'StripeCardError':
+          if (error.code === 'card_declined' && error.message.includes('real card while testing')) {
+            return next(
+              errorHandler(
+                400,
+                'Please use a test card number. Try: 4242 4242 4242 4242 with any future expiry date and any 3-digit CVC.'
+              )
+            )
+          }
           return next(
             errorHandler(
               400,
-              'Invalid payment card. Please check your card details.'
+              `Card error: ${error.message}`
             )
           )
         case 'StripeInvalidRequestError':
+          console.error('Stripe invalid request:', error.message)
           return next(
-            errorHandler(400, 'Invalid payment information provided.')
+            errorHandler(400, `Payment error: ${error.message}`)
           )
         default:
+          console.error('Other Stripe error:', error.type, error.message)
           return next(
             errorHandler(500, 'Payment processing error. Please try again.')
           )
@@ -360,9 +402,10 @@ export const createSetupIntent = async (req, res, next) => {
       return next(errorHandler(400, 'Email is required'))
     }
 
-    // Create setup intent for future payments
+    // Create setup intent without customer first (simpler approach)
     const setupIntent = await stripe.setupIntents.create({
-      usage: 'off_session',
+      usage: 'on_session',
+      payment_method_types: ['card'],
       metadata: {
         email,
         purpose: 'registration',
@@ -374,7 +417,89 @@ export const createSetupIntent = async (req, res, next) => {
       clientSecret: setupIntent.client_secret,
     })
   } catch (error) {
-    console.error('Setup intent error:', error)
-    next(errorHandler(500, 'Error creating payment setup'))
+    console.error('Setup intent error:', error.message)
+    console.error('Full error:', error)
+    next(errorHandler(500, `Error creating payment setup: ${error.message}`))
+  }
+}
+
+// Simple signup without payment requirement (temporary workaround)
+export const signupSimple = async (req, res, next) => {
+  try {
+    const { email, password, username } = req.body
+
+    // Validate required fields
+    if (!email || !password) {
+      return next(errorHandler(400, 'Email and password are required'))
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      return next(errorHandler(400, 'Password must be at least 8 characters long'))
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email })
+    if (existingUser) {
+      return next(errorHandler(409, 'User already exists'))
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 8)
+
+    // Create new user without Stripe information
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      username: username || 'anonymous',
+      avatar: 'https://www.gravatar.com/avatar/?d=mp&f=y',
+      // Default values for free users
+      subscription: 'free',
+      listingLimit: 1,
+      subscriptionStatus: 'active',
+      role: 'user',
+    })
+
+    await newUser.save()
+
+    // Generate JWT token
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
+      expiresIn: '30d',
+    })
+
+    const { password: _, ...userWithoutPassword } = newUser._doc
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      user: userWithoutPassword,
+      token,
+    })
+  } catch (error) {
+    console.error('Simple signup error:', error)
+    next(errorHandler(500, 'Error creating user'))
+  }
+}
+
+// Test endpoint to check Stripe connectivity
+export const testStripe = async (req, res, next) => {
+  try {
+    console.log('Testing Stripe connection...')
+    
+    // Try to list some customers (should work even if no customers exist)
+    const customers = await stripe.customers.list({ limit: 1 })
+    console.log('Stripe connection successful:', customers)
+    
+    res.json({
+      success: true,
+      message: 'Stripe connection working',
+      data: customers
+    })
+  } catch (error) {
+    console.error('Stripe test error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Stripe connection failed',
+      error: error.message
+    })
   }
 }

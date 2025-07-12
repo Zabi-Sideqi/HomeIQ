@@ -1,5 +1,5 @@
 // client/src/pages/SignUp.jsx
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { loadStripe } from '@stripe/stripe-js'
 import {
@@ -27,11 +27,15 @@ const SignUpForm = () => {
   })
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [setupIntentSecret, setSetupIntentSecret] = useState(null)
+  const [cardComplete, setCardComplete] = useState(false)
 
   const stripe = useStripe()
   const elements = useElements()
   const navigate = useNavigate()
+
+  // Check if we're in test mode or live mode
+  const isTestMode = import.meta.env.VITE_STRIPE_MODE === 'test' || 
+                     import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test')
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -40,41 +44,6 @@ const SignUpForm = () => {
     }))
     setError(null) // Clear error when user starts typing
   }
-
-  const createSetupIntent = async () => {
-    if (!formData.email) {
-      setError('Please enter your email first')
-      return
-    }
-
-    try {
-      const response = await fetch(apiUrl('/api/auth/setup-intent'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: formData.email }),
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        setSetupIntentSecret(data.clientSecret)
-      } else {
-        setError('Error setting up payment. Please try again.')
-      }
-    } catch (error) {
-      console.error('Setup intent error:', error)
-      setError('Error setting up payment. Please try again.')
-    }
-  }
-
-  // Create setup intent when email is entered
-  useEffect(() => {
-    if (formData.email && formData.email.includes('@') && !setupIntentSecret) {
-      createSetupIntent()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.email, setupIntentSecret])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -106,197 +75,218 @@ const SignUpForm = () => {
       return
     }
 
-    const cardElement = elements.getElement(CardElement)
-    if (!cardElement) {
-      setError('Please enter your card information')
+    if (!cardComplete) {
+      setError('Please complete your card information.')
       setLoading(false)
       return
     }
 
     try {
-      // Confirm setup intent with card
-      const { error: stripeError, setupIntent } = await stripe.confirmCardSetup(
-        setupIntentSecret,
-        {
-          payment_method: {
-            card: cardElement,
-            billing_details: {
-              name: formData.username,
-              email: formData.email,
-            },
-          },
-        }
-      )
+      // Get the CardElement
+      const cardElement = elements.getElement(CardElement)
 
-      if (stripeError) {
-        setError(stripeError.message)
+      if (!cardElement) {
+        setError('Card element not found. Please refresh the page.')
         setLoading(false)
         return
       }
 
-      // Create account with payment method
+      // Check if card element is complete
+      const cardState = await cardElement._complete
+      console.log('Card element state:', cardState)
+
+      // Create payment method
+      console.log('Creating payment method...')
+      const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name: formData.username,
+          email: formData.email,
+        },
+      })
+
+      console.log('Stripe response:', { error: stripeError, paymentMethod })
+
+      if (stripeError) {
+        console.error('Stripe payment method error:', stripeError)
+        setError(stripeError.message || 'Invalid payment card. Please check your card details.')
+        setLoading(false)
+        return
+      }
+
+      // Submit to backend with payment method
       const response = await fetch(apiUrl('/api/auth/signup'), {
-        credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
-          paymentMethodId: setupIntent.payment_method,
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          paymentMethodId: paymentMethod.id,
         }),
       })
 
       const data = await response.json()
 
-      if (data.success === false) {
-        setError(data.message)
-        setLoading(false)
-        return
+      if (data.success) {
+        toast.success('Account created successfully! Please sign in to continue.')
+        setTimeout(() => {
+          navigate('/sign-in')
+        }, 2000)
+      } else {
+        setError(data.message || 'Registration failed. Please try again.')
       }
-
-      setLoading(false)
-      toast.success('Account created successfully!')
-      setTimeout(() => navigate('/sign-in'), 1500)
     } catch (error) {
-      console.error('Signup error:', error)
-      setError('Something went wrong. Please try again.')
+      console.error('Registration error:', error)
+      setError('An error occurred during registration. Please try again.')
+    } finally {
       setLoading(false)
     }
   }
 
-  const cardElementOptions = {
-    style: {
-      base: {
-        fontSize: '16px',
-        color: '#374151',
-        '::placeholder': {
-          color: '#9CA3AF',
-        },
-      },
-      invalid: {
-        color: '#EF4444',
-      },
-    },
-    hidePostalCode: false,
-  }
-
   return (
-    <div className='p-3 max-w-lg mx-auto'>
-      <ToastContainer />
-      <h1 className='text-3xl text-center font-semibold my-7'>Sign Up</h1>
-
-      <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
+    <div className="p-3 max-w-lg mx-auto">
+      <h1 className="text-3xl text-center font-semibold my-7">Sign Up</h1>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <input
-          type='text'
-          placeholder='Username'
-          className='border p-3 rounded-lg'
-          id='username'
+          type="text"
+          placeholder="Username"
+          className="border p-3 rounded-lg"
+          id="username"
           value={formData.username}
           onChange={handleChange}
           required
         />
-
         <input
-          type='email'
-          placeholder='Email'
-          className='border p-3 rounded-lg'
-          id='email'
+          type="email"
+          placeholder="Email"
+          className="border p-3 rounded-lg"
+          id="email"
           value={formData.email}
           onChange={handleChange}
           required
         />
-
         <input
-          type='password'
-          placeholder='Password (min 8 characters)'
-          className='border p-3 rounded-lg'
-          id='password'
+          type="password"
+          placeholder="Password (min 8 characters)"
+          className="border p-3 rounded-lg"
+          id="password"
           value={formData.password}
           onChange={handleChange}
           required
-          minLength={8}
         />
-
         <input
-          type='password'
-          placeholder='Confirm Password'
-          className='border p-3 rounded-lg'
-          id='confirmPassword'
+          type="password"
+          placeholder="Confirm Password"
+          className="border p-3 rounded-lg"
+          id="confirmPassword"
           value={formData.confirmPassword}
           onChange={handleChange}
           required
         />
-
-        {/* Card Information Section */}
-        <div className='border rounded-lg p-4 bg-gray-50'>
-          <h3 className='text-lg font-medium text-gray-900 mb-3'>
-            Payment Information
-          </h3>
-          <p className='text-sm text-gray-600 mb-4'>
-            We require a payment method to prevent spam accounts. You won't be
-            charged during registration.
-          </p>
-
-          <div className='border border-gray-300 rounded-lg p-3 bg-white'>
-            <CardElement options={cardElementOptions} />
+        
+        {/* Card Element */}
+        <div className="border p-3 rounded-lg">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Payment Card (Required) *
+          </label>
+          <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-3">
+            {isTestMode ? (
+              <>
+                <p className="text-sm text-blue-800 font-medium">Test Mode - Use these test cards:</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-blue-700">• <span className="font-mono">4242 4242 4242 4242</span> - Visa (Succeeds)</p>
+                  <p className="text-sm text-blue-700">• <span className="font-mono">4000 0000 0000 0002</span> - Visa (Declined)</p>
+                  <p className="text-sm text-blue-700">• <span className="font-mono">5555 5555 5555 4444</span> - Mastercard (Succeeds)</p>
+                  <p className="text-sm text-blue-700">• <span className="font-mono">3782 8224 6310 005</span> - American Express</p>
+                </div>
+                <p className="text-sm text-blue-700 mt-2">• Expiry: Any future date (e.g., 12/25)</p>
+                <p className="text-sm text-blue-700">• CVC: Any 3 digits (e.g., 123)</p>
+                <p className="text-xs text-blue-600 mt-2 bg-yellow-50 p-1 rounded">
+                  ⚠️ <strong>Important:</strong> Only test cards work in development mode. Real cards are automatically rejected.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-green-800 font-medium">🔒 Live Mode - Real Card Processing</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-green-700">• Use your real credit or debit card</p>
+                  <p className="text-sm text-green-700">• Your card will be securely saved for future purchases</p>
+                  <p className="text-sm text-green-700">• SSL encrypted and PCI compliant</p>
+                </div>
+                <p className="text-xs text-green-600 mt-2 bg-green-50 p-1 rounded">
+                  🛡️ <strong>Secure:</strong> Card details are processed by Stripe and never stored on our servers.
+                </p>
+              </>
+            )}
           </div>
-
-          <div className='mt-2 flex items-center text-xs text-gray-500'>
-            <svg
-              className='h-4 w-4 mr-1'
-              fill='none'
-              stroke='currentColor'
-              viewBox='0 0 24 24'
-            >
-              <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
-                strokeWidth='2'
-                d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
-              />
-            </svg>
-            Secured by Stripe. Your card information is encrypted and secure.
-          </div>
+          <CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: '#424770',
+                  '::placeholder': {
+                    color: '#aab7c4',
+                  },
+                },
+                invalid: {
+                  color: '#9e2146',
+                },
+              },
+            }}
+            onChange={(event) => {
+              setCardComplete(event.complete)
+              if (event.error) {
+                setError(event.error.message)
+              } else {
+                setError(null)
+              }
+            }}
+          />
         </div>
+
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
 
         <button
-          type='submit'
-          disabled={loading || !stripe}
-          className='bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80'
+          disabled={loading || !stripe || !cardComplete}
+          type="submit"
+          className="bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80"
         >
-          {loading ? 'Creating Account...' : 'Create Account'}
+          {loading ? 'Creating Account...' : !cardComplete ? 'Complete Card Details' : 'Sign Up with Payment Card'}
         </button>
+        <OAuth />
       </form>
-
-      <OAuth />
-
-      <div className='flex gap-2 mt-5'>
-        <p>Already have an account?</p>
-        <Link to='/sign-in'>
-          <span className='text-blue-700'>Sign in</span>
+      <div className="flex gap-2 mt-5">
+        <p>Have an account?</p>
+        <Link to="/sign-in">
+          <span className="text-blue-700">Sign in</span>
         </Link>
       </div>
-
-      {error && (
-        <div className='mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded'>
-          {error}
-        </div>
-      )}
-
-      {/* Information Section */}
-      <div className='mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg'>
-        <h4 className='font-medium text-blue-900 mb-2'>
-          Why do we need your payment method?
-        </h4>
-        <ul className='text-sm text-blue-700 space-y-1'>
-          <li>• Prevents spam and fake accounts</li>
-          <li>• Enables seamless upgrades when you need more listings</li>
-          <li>• You get 1 free listing to start</li>
-          <li>• No charges during registration</li>
-          <li>• Secure payment processing by Stripe</li>
-        </ul>
+      <div className="flex gap-2 mt-2">
+        <p className="text-sm text-gray-600">Need help with payment?</p>
+        <Link to="/sign-up-simple">
+          <span className="text-blue-700 text-sm">Register without payment</span>
+        </Link>
       </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   )
 }
