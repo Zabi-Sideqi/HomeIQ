@@ -216,6 +216,7 @@ const Profile = () => {
     )
     const imageUrlsToDelete = listingToDelete?.imageUrls || []
 
+    // Delete images from Firebase storage first
     const storage = getStorage()
     for (const url of imageUrlsToDelete) {
       const path = decodeURIComponent(url.split('/o/')[1].split('?')[0])
@@ -228,12 +229,7 @@ const Profile = () => {
     }
 
     try {
-      await fetch(apiUrl(`/api/listing/delete-images/${listingId}`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrls: imageUrlsToDelete }),
-      })
-
+      // Delete the entire listing (no need to call delete-images endpoint)
       const res = await fetch(apiUrl(`/api/listing/delete/${listingId}`), {
         method: 'DELETE',
         headers: {

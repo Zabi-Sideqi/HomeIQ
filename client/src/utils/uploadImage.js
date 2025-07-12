@@ -1,4 +1,4 @@
-// utils/uploadImage.js
+/* // utils/uploadImage.js
 import { ref, uploadBytes, updateMetadata, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase"; 
 
@@ -24,3 +24,4 @@ export async function uploadImage(file) {
     throw error;
   }
 }
+ */

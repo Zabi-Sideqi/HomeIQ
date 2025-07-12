@@ -15,7 +15,7 @@ import { useSelector } from 'react-redux'
 import { apiUrl } from '../utils/api'
 
 export default function UpdateListing() {
-  const { currentUser } = useSelector((state) => state.user)
+  const { currentUser, token } = useSelector((state) => state.user)
   const [files, setFiles] = useState([])
   const [formData, setFormData] = useState({
     imageUrls: [],
@@ -46,18 +46,43 @@ export default function UpdateListing() {
   const navigate = useNavigate()
   const params = useParams()
 
+  // Check if user is authenticated
+  useEffect(() => {
+    if (!currentUser || !token) {
+      toast.error('Please log in to update listings.')
+      navigate('/sign-in')
+    }
+  }, [currentUser, token, navigate])
+
   useEffect(() => {
     const fetchListing = async () => {
-      const res = await fetch(apiUrl(`/api/listing/get/${params.listingId}`))
-      const data = await res.json()
-      if (data.success === false) {
-        toast.error(data.message)
-        return
+      try {
+        const res = await fetch(apiUrl(`/api/listing/get/${params.listingId}`))
+        const data = await res.json()
+        if (data.success === false) {
+          toast.error(data.message)
+          return
+        }
+        
+        // Check if current user owns this listing
+        if (data.userRef !== currentUser?._id) {
+          toast.error('You can only edit your own listings.')
+          navigate('/profile')
+          return
+        }
+        
+        setFormData(data)
+      } catch (err) {
+        console.error('Error fetching listing:', err)
+        toast.error('Error fetching listing')
+        navigate('/profile')
       }
-      setFormData(data)
     }
-    fetchListing()
-  }, [params.listingId])
+    
+    if (currentUser && params.listingId) {
+      fetchListing()
+    }
+  }, [params.listingId, currentUser, navigate])
 
   const handleChange = (e) => {
     const { id, value } = e.target
@@ -82,7 +107,7 @@ export default function UpdateListing() {
       const fullAddress =
         `${formData.address}, ${formData.location.city}, ${formData.location.postcode}`.trim()
       const response = await fetch(
-        `/api/listing/geocode?address=${encodeURIComponent(fullAddress)}`
+        apiUrl(`/api/listing/geocodeAddress?address=${encodeURIComponent(fullAddress)}`)
       )
       const data = await response.json()
 
@@ -157,6 +182,12 @@ export default function UpdateListing() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
+    // Check if user is authenticated
+    if (!currentUser || !token) {
+      toast.error('Please log in to update listings.')
+      return
+    }
+
     if (
       formData.offer &&
       Number(formData.discountPrice) >= Number(formData.regularPrice)
@@ -179,7 +210,10 @@ export default function UpdateListing() {
         apiUrl(`/api/listing/update/${params.listingId}`),
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ ...formData, userRef: currentUser._id }),
         }
       )
@@ -192,7 +226,10 @@ export default function UpdateListing() {
       if (removedImages.length > 0) {
         await fetch(apiUrl(`/api/listing/delete-images/${params.listingId}`), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ imageUrls: removedImages }),
         })
 

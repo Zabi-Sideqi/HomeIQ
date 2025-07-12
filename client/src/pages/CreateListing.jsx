@@ -1,14 +1,14 @@
 //client/src/pages/CreateListing.jsx
 
-import React, { useState } from 'react'
-import { uploadImage } from '../utils/uploadImage'
-/* import {
+import React, { useState, useEffect } from 'react'
+/* import { uploadImage } from '../utils/uploadImage' */
+import {
   getStorage,
   ref,
   uploadBytesResumable,
   getDownloadURL,
-} from 'firebase/storage' */
-/* import { app } from '../firebase' */
+} from 'firebase/storage'
+import { app } from '../firebase'
 import { useNavigate } from 'react-router-dom'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -16,7 +16,7 @@ import { useSelector } from 'react-redux'
 import { apiUrl } from '../utils/api'
 
 export default function CreateListing() {
-  const { currentUser } = useSelector((state) => state.user)
+  const { currentUser, token } = useSelector((state) => state.user)
   const [files, setFiles] = useState([])
   const [formData, setFormData] = useState({
     imageUrls: [],
@@ -46,6 +46,31 @@ export default function CreateListing() {
   const [uploading, setUploading] = useState(false)
   const navigate = useNavigate()
 
+  // Check if user is authenticated
+  useEffect(() => {
+    if (!currentUser || !token) {
+      toast.error('Please log in to create a listing.')
+      navigate('/sign-in')
+    }
+  }, [currentUser, token, navigate])
+
+  const handleChange = (e) => {
+    const { id, value } = e.target
+    if (id === 'postcode' || id === 'city') {
+      setFormData((prev) => ({
+        ...prev,
+        location: {
+          ...prev.location,
+          [id]: value,
+        },
+      }))
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [id]: value,
+      }))
+    }
+  }
 
   const handleImageSubmit = () => {
     if (files.length > 0 && files.length + formData.imageUrls.length <= 6) {
@@ -80,7 +105,7 @@ export default function CreateListing() {
     }
   }
 
-/*   const storeImage = async (file) => {
+  const storeImage = async (file) => {
     return new Promise((resolve, reject) => {
       const storage = getStorage(app)
       const fileName = new Date().getTime() + file.name
@@ -105,9 +130,9 @@ export default function CreateListing() {
         }
       )
     })
-  } */
+  }
 
-    const storeImage = async (file) => {
+  /*     const storeImage = async (file) => {
   try {
     const { imageUrl, thumbnailUrl } = await uploadImage(file);
 
@@ -124,14 +149,18 @@ export default function CreateListing() {
     throw err;
   }
 };
-
+ */
 
   const geocodeAddress = async () => {
     try {
       const fullAddress =
         `${formData.address}, ${formData.location.city}, ${formData.location.postcode}`.trim()
       const response = await fetch(
-        apiUrl(`/api/listing/geocode?address=${encodeURIComponent(fullAddress)}`),
+        apiUrl(
+          `/api/listing/geocodeAddress?address=${encodeURIComponent(
+            fullAddress
+          )}`
+        ),
         { credentials: 'include' }
       )
       const data = await response.json()
@@ -173,6 +202,13 @@ export default function CreateListing() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
+    // Check if user is authenticated
+    if (!currentUser || !token) {
+      setImageUploadError('You must be logged in to create a listing.')
+      toast.error('Please log in to create a listing.')
+      return
+    }
+
     if (
       formData.offer &&
       Number(formData.discountPrice) >= Number(formData.regularPrice)
@@ -203,6 +239,7 @@ export default function CreateListing() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -235,11 +272,254 @@ export default function CreateListing() {
         Create Listing
       </h1>
       <form onSubmit={handleSubmit} className='flex flex-col sm:flex-row gap-6'>
-        {/* Right Side */}
+        {/* Left Side - Form Fields */}
+        <div className='flex flex-col flex-1 gap-4'>
+          <input
+            type='text'
+            id='name'
+            placeholder='Property Name/Title'
+            value={formData.name}
+            onChange={handleChange}
+            required
+            maxLength='62'
+            minLength='10'
+            className='border border-slate-300 rounded-lg p-3'
+          />
+
+          <textarea
+            type='text'
+            id='description'
+            placeholder='Description'
+            value={formData.description}
+            onChange={handleChange}
+            required
+            rows='6'
+            className='border border-slate-300 rounded-lg p-3'
+          />
+
+          <input
+            type='text'
+            id='address'
+            placeholder='Address'
+            value={formData.address}
+            onChange={handleChange}
+            required
+            className='border border-slate-300 rounded-lg p-3'
+          />
+
+          <div className='flex gap-4'>
+            <input
+              type='text'
+              id='city'
+              placeholder='City'
+              value={formData.location.city}
+              onChange={handleChange}
+              className='border border-slate-300 rounded-lg p-3 flex-1'
+            />
+
+            <input
+              type='text'
+              id='postcode'
+              placeholder='Postcode'
+              value={formData.location.postcode}
+              onChange={handleChange}
+              className='border border-slate-300 rounded-lg p-3 flex-1'
+            />
+          </div>
+
+          <div className='flex gap-6'>
+            <div className='flex items-center gap-2'>
+              <input
+                type='radio'
+                id='sale'
+                name='type'
+                value='sale'
+                checked={formData.type === 'sale'}
+                onChange={() =>
+                  setFormData((prev) => ({ ...prev, type: 'sale' }))
+                }
+                className='w-5'
+              />
+              <label htmlFor='sale'>Sell</label>
+            </div>
+            <div className='flex items-center gap-2'>
+              <input
+                type='radio'
+                id='rent'
+                name='type'
+                value='rent'
+                checked={formData.type === 'rent'}
+                onChange={() =>
+                  setFormData((prev) => ({ ...prev, type: 'rent' }))
+                }
+                className='w-5'
+              />
+              <label htmlFor='rent'>Rent</label>
+            </div>
+          </div>
+
+          <div className='mb-4'>
+            <label
+              htmlFor='propertyType'
+              className='block text-sm font-medium text-gray-700 mb-2'
+            >
+              Property Type
+            </label>
+            <select
+              id='propertyType'
+              value={formData.propertyType}
+              onChange={handleChange}
+              className='border border-slate-300 rounded-lg p-3 w-full'
+            >
+              <option value='Detached'>Detached</option>
+              <option value='Semi-detached'>Semi-detached</option>
+              <option value='Terraced'>Terraced</option>
+              <option value='Flat'>Flat</option>
+              <option value='Bungalow'>Bungalow</option>
+              <option value='Park Home'>Park Home</option>
+              <option value='Land'>Land</option>
+              <option value='Student Halls'>Student Halls</option>
+            </select>
+          </div>
+
+          <div className='flex gap-6 flex-wrap'>
+            <div className='flex items-center gap-2'>
+              <input
+                type='checkbox'
+                id='parking'
+                checked={formData.parking}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    parking: e.target.checked,
+                  }))
+                }
+                className='w-5'
+              />
+              <label htmlFor='parking'>Parking spot</label>
+            </div>
+
+            <div className='flex items-center gap-2'>
+              <input
+                type='checkbox'
+                id='furnished'
+                checked={formData.furnished}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    furnished: e.target.checked,
+                  }))
+                }
+                className='w-5'
+              />
+              <label htmlFor='furnished'>Furnished</label>
+            </div>
+
+            <div className='flex items-center gap-2'>
+              <input
+                type='checkbox'
+                id='offer'
+                checked={formData.offer}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    offer: e.target.checked,
+                  }))
+                }
+                className='w-5'
+              />
+              <label htmlFor='offer'>Offer</label>
+            </div>
+          </div>
+
+          <div className='flex gap-6'>
+            <div className='flex items-center gap-2'>
+              <input
+                type='number'
+                id='bedrooms'
+                min='1'
+                max='10'
+                value={formData.bedrooms}
+                onChange={handleChange}
+                required
+                className='border border-slate-300 rounded-lg p-3 w-20'
+              />
+              <label htmlFor='bedrooms'>Beds</label>
+            </div>
+
+            <div className='flex items-center gap-2'>
+              <input
+                type='number'
+                id='bathrooms'
+                min='1'
+                max='10'
+                value={formData.bathrooms}
+                onChange={handleChange}
+                required
+                className='border border-slate-300 rounded-lg p-3 w-20'
+              />
+              <label htmlFor='bathrooms'>Baths</label>
+            </div>
+          </div>
+
+          <div className='flex gap-6'>
+            <div className='flex items-center gap-2'>
+              <input
+                type='number'
+                id='regularPrice'
+                min='50'
+                max='10000000'
+                value={formData.regularPrice}
+                onChange={handleChange}
+                required
+                className='border border-slate-300 rounded-lg p-3'
+              />
+              <div className='flex flex-col items-center'>
+                <p>Regular price</p>
+                {formData.type === 'rent' && (
+                  <span className='text-xs'>($ / month)</span>
+                )}
+              </div>
+            </div>
+
+            {formData.offer && (
+              <div className='flex items-center gap-2'>
+                <input
+                  type='number'
+                  id='discountPrice'
+                  min='0'
+                  max='10000000'
+                  value={formData.discountPrice}
+                  onChange={handleChange}
+                  required
+                  className='border border-slate-300 rounded-lg p-3'
+                />
+                <div className='flex flex-col items-center'>
+                  <p>Discounted price</p>
+                  {formData.type === 'rent' && (
+                    <span className='text-xs'>($ / month)</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            type='button'
+            onClick={geocodeAddress}
+            className='p-3 text-blue-700 border border-blue-700 rounded-lg uppercase hover:shadow-lg disabled:opacity-80'
+          >
+            Geocode Address
+          </button>
+        </div>
+
+        {/* Right Side - Images */}
         <div className='flex flex-col flex-1 gap-4'>
           <p className='text-center font-semibold'>
             Images:
-            <span className='font-normal text-gray-500 ml-2'>(Max 6 images)</span>
+            <span className='font-normal text-gray-500 ml-2'>
+              (Max 6 images)
+            </span>
           </p>
 
           <div className='flex gap-4'>
@@ -254,9 +534,10 @@ export default function CreateListing() {
             <button
               type='button'
               onClick={handleImageSubmit}
+              disabled={uploading}
               className='p-3 text-green-700 border border-green-700 rounded-lg uppercase hover:shadow-lg disabled:opacity-80'
             >
-              Upload
+              {uploading ? 'Uploading...' : 'Upload'}
             </button>
           </div>
 
@@ -287,7 +568,12 @@ export default function CreateListing() {
                       if (window.confirm('Delete this image?')) {
                         setFormData((prev) => ({
                           ...prev,
-                          imageUrls: prev.imageUrls.filter((_, i) => i !== index),
+                          imageUrls: prev.imageUrls.filter(
+                            (_, i) => i !== index
+                          ),
+                          thumbnailUrls: prev.thumbnailUrls
+                            ? prev.thumbnailUrls.filter((_, i) => i !== index)
+                            : [],
                         }))
                         toast.info('Image deleted.')
                       }
@@ -302,11 +588,13 @@ export default function CreateListing() {
           )}
 
           <button
+            disabled={uploading}
             type='submit'
-            className='p-3 text-white bg-slate-700 rounded-lg uppercase hover:shadow-lg'
+            className='p-3 text-white bg-slate-700 rounded-lg uppercase hover:shadow-lg disabled:opacity-80'
           >
-            Create Listing
+            {uploading ? 'Creating...' : 'Create Listing'}
           </button>
+
           <button
             type='button'
             onClick={handleCancel}
@@ -319,4 +607,3 @@ export default function CreateListing() {
     </main>
   )
 }
-

@@ -30,7 +30,7 @@ export const deleteListing = async (req, res, next) => {
     return next(errorHandler(404, 'Listing not found'))
   }
 
-  if (listing.userId !== listing.userRef) {
+  if (listing.userRef !== req.user.id) {
     return next(errorHandler(401, 'You can only delete your own listings'))
   }
 
@@ -50,6 +50,10 @@ export const deleteListingImages = async (req, res, next) => {
     const listing = await Listing.findById(id)
     if (!listing) {
       return next(errorHandler(404, 'Listing not found'))
+    }
+
+    if (listing.userRef !== req.user.id) {
+      return next(errorHandler(401, 'You can only modify your own listings'))
     }
 
     listing.imageUrls = listing.imageUrls.filter(
@@ -73,7 +77,7 @@ export const updateListing = async (req, res, next) => {
     return next(errorHandler(404, 'Listing not found'))
   }
 
-  if (listing.userId !== listing.userRef) {
+  if (listing.userRef !== req.user.id) {
     return next(errorHandler(401, 'You can only update your own listings'))
   }
 
