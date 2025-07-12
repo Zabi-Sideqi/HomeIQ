@@ -32,7 +32,8 @@ const SetupPaymentForm = () => {
   const location = useLocation()
 
   // Get user data from navigation state
-  const { user, token, isOAuthUser, returnTo, returnState } = location.state || {}
+  const { user, token, isOAuthUser, returnTo, returnState } =
+    location.state || {}
 
   const createSetupIntent = useCallback(async () => {
     try {
@@ -136,7 +137,7 @@ const SetupPaymentForm = () => {
 
       setLoading(false)
       toast.success('Payment method added successfully!')
-      
+
       // Redirect to return location if provided, otherwise go to home
       if (returnTo && returnState) {
         setTimeout(() => {

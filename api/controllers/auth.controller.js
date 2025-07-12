@@ -15,7 +15,10 @@ dotenv.config()
 if (!process.env.STRIPE_SECRET_KEY) {
   console.error('STRIPE_SECRET_KEY not found in environment variables')
 } else {
-  console.log('Stripe secret key configured:', process.env.STRIPE_SECRET_KEY.substring(0, 7) + '...')
+  console.log(
+    'Stripe secret key configured:',
+    process.env.STRIPE_SECRET_KEY.substring(0, 7) + '...'
+  )
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -24,11 +27,19 @@ export const signup = async (req, res, next) => {
   try {
     const { email, password, username, paymentMethodId } = req.body
 
-    console.log('Signup request received:', { email, username, paymentMethodId: paymentMethodId ? 'present' : 'missing' })
+    console.log('Signup request received:', {
+      email,
+      username,
+      paymentMethodId: paymentMethodId ? 'present' : 'missing',
+    })
 
     // Validate required fields
     if (!email || !password || !paymentMethodId) {
-      console.log('Missing required fields:', { email: !!email, password: !!password, paymentMethodId: !!paymentMethodId })
+      console.log('Missing required fields:', {
+        email: !!email,
+        password: !!password,
+        paymentMethodId: !!paymentMethodId,
+      })
       return next(
         errorHandler(400, 'Email, password, and payment method are required')
       )
@@ -104,16 +115,23 @@ export const signup = async (req, res, next) => {
       type: error.type,
       code: error.code,
       statusCode: error.statusCode,
-      stack: error.stack
+      stack: error.stack,
     })
 
     // Handle MongoDB duplicate key errors
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern || {})[0]
       if (field === 'email') {
-        return next(errorHandler(409, 'An account with this email already exists'))
+        return next(
+          errorHandler(409, 'An account with this email already exists')
+        )
       } else if (field === 'username') {
-        return next(errorHandler(409, 'This username is already taken. Please choose a different username.'))
+        return next(
+          errorHandler(
+            409,
+            'This username is already taken. Please choose a different username.'
+          )
+        )
       }
       return next(errorHandler(409, 'This information is already in use'))
     }
@@ -122,7 +140,10 @@ export const signup = async (req, res, next) => {
     if (error.type) {
       switch (error.type) {
         case 'StripeCardError':
-          if (error.code === 'card_declined' && error.message.includes('real card while testing')) {
+          if (
+            error.code === 'card_declined' &&
+            error.message.includes('real card while testing')
+          ) {
             return next(
               errorHandler(
                 400,
@@ -130,17 +151,10 @@ export const signup = async (req, res, next) => {
               )
             )
           }
-          return next(
-            errorHandler(
-              400,
-              `Card error: ${error.message}`
-            )
-          )
+          return next(errorHandler(400, `Card error: ${error.message}`))
         case 'StripeInvalidRequestError':
           console.error('Stripe invalid request:', error.message)
-          return next(
-            errorHandler(400, `Payment error: ${error.message}`)
-          )
+          return next(errorHandler(400, `Payment error: ${error.message}`))
         default:
           console.error('Other Stripe error:', error.type, error.message)
           return next(
@@ -435,7 +449,9 @@ export const signupSimple = async (req, res, next) => {
 
     // Validate password length
     if (password.length < 8) {
-      return next(errorHandler(400, 'Password must be at least 8 characters long'))
+      return next(
+        errorHandler(400, 'Password must be at least 8 characters long')
+      )
     }
 
     // Check if user already exists
@@ -484,22 +500,22 @@ export const signupSimple = async (req, res, next) => {
 export const testStripe = async (req, res, next) => {
   try {
     console.log('Testing Stripe connection...')
-    
+
     // Try to list some customers (should work even if no customers exist)
     const customers = await stripe.customers.list({ limit: 1 })
     console.log('Stripe connection successful:', customers)
-    
+
     res.json({
       success: true,
       message: 'Stripe connection working',
-      data: customers
+      data: customers,
     })
   } catch (error) {
     console.error('Stripe test error:', error)
     res.status(500).json({
       success: false,
       message: 'Stripe connection failed',
-      error: error.message
+      error: error.message,
     })
   }
 }

@@ -39,7 +39,12 @@ const PaymentForm = () => {
   const createPaymentIntent = useCallback(
     async (planType) => {
       try {
-        console.log('Creating payment intent for planType:', planType, 'type:', type)
+        console.log(
+          'Creating payment intent for planType:',
+          planType,
+          'type:',
+          type
+        )
         const endpoint =
           type === 'subscription'
             ? '/api/payment/intent/subscription'
@@ -77,8 +82,8 @@ const PaymentForm = () => {
                   user: currentUser,
                   token: token,
                   returnTo: '/payment',
-                  returnState: { type, subscriptionType }
-                }
+                  returnState: { type, subscriptionType },
+                },
               })
             }, 1500)
           } else {
@@ -101,15 +106,25 @@ const PaymentForm = () => {
       console.log('Pricing response:', data)
       if (data.success) {
         setPricing(data.pricing)
-        console.log('Pricing set, type:', type, 'subscriptionType:', subscriptionType)
+        console.log(
+          'Pricing set, type:',
+          type,
+          'subscriptionType:',
+          subscriptionType
+        )
         if (type === 'subscription' && subscriptionType) {
-          console.log('Creating payment intent for subscription:', subscriptionType)
+          console.log(
+            'Creating payment intent for subscription:',
+            subscriptionType
+          )
           createPaymentIntent(subscriptionType)
         } else if (type === 'listing') {
           console.log('Creating payment intent for additional listing')
           createPaymentIntent('additional')
         } else {
-          console.log('No payment intent created - missing type or subscriptionType')
+          console.log(
+            'No payment intent created - missing type or subscriptionType'
+          )
         }
       } else {
         console.error('Pricing fetch failed:', data)
