@@ -367,7 +367,7 @@ export default function Search() {
             </select>
           </div>
 
-          <div>
+{/*           <div>
             <label className='font-semibold text-gray-700 block mb-1'>
               🛏️ Bedrooms
             </label>
@@ -375,6 +375,7 @@ export default function Search() {
               <input
                 type='number'
                 id='minBedrooms'
+                
                 placeholder='Min'
                 onChange={handleChange}
                 value={sidebardata.minBedrooms}
@@ -384,6 +385,7 @@ export default function Search() {
               <input
                 type='number'
                 id='maxBedrooms'
+                
                 placeholder='Max'
                 onChange={handleChange}
                 value={sidebardata.maxBedrooms}
@@ -391,7 +393,39 @@ export default function Search() {
                 min='0'
               />
             </div>
-          </div>
+          </div> */}
+          <div>
+  <label htmlFor='minBedrooms' className='font-semibold text-gray-700 block mb-1'>
+    🛏️ Min Bedrooms
+  </label>
+  <input
+    type='number'
+    id='minBedrooms'
+    name='minBedrooms'
+    placeholder='Min'
+    onChange={handleChange}
+    value={sidebardata.minBedrooms}
+    className='bg-slate-400 p-3 rounded-lg w-full'
+    min='0'
+  />
+</div>
+
+<div>
+  <label htmlFor='maxBedrooms' className='font-semibold text-gray-700 block mb-1'>
+    🛏️ Max Bedrooms
+  </label>
+  <input
+    type='number'
+    id='maxBedrooms'
+    name='maxBedrooms'
+    placeholder='Max'
+    onChange={handleChange}
+    value={sidebardata.maxBedrooms}
+    className='bg-slate-400 p-3 rounded-lg w-full'
+    min='0'
+  />
+</div>
+
 
           <div>
             <label className='font-semibold text-gray-700 block mb-1'>
