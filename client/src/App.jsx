@@ -15,6 +15,9 @@ import Favorites from './pages/Favorites'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import AdminDashboard from './pages/AdminDashboard'
+import Pricing from './pages/Pricing'
+import SetupPayment from './pages/SetupPayment'
+import Payment from './pages/Payment'
 
 const App = () => {
   return (
@@ -25,11 +28,14 @@ const App = () => {
         <Route path='/sign-in' element={<SignIn />} />
         <Route path='/sign-up' element={<SignUp />} />
         <Route path='/about' element={<About />} />
+        <Route path='/pricing' element={<Pricing />} />
         <Route path='/search' element={<Search />} />
         <Route path='/listing/:listingId' element={<Listing />} />
         <Route path='/forgot-password' element={<ForgotPassword />} />
         <Route path='/reset-password/:token' element={<ResetPassword />} />
+        <Route path='/setup-payment' element={<SetupPayment />} />
         <Route element={<PrivateRoute />}>
+          <Route path='/payment' element={<Payment />} />
           <Route path='/profile' element={<Profile />} />
           <Route path='/create-listing' element={<CreateListing />} />
           <Route

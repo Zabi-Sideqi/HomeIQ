@@ -10,6 +10,7 @@ dotenv.config()
 
 export const createListing = async (req, res, next) => {
   try {
+    // Check if listing with same address already exists
     const existingListing = await Listing.findOne({ address: req.body.address })
     if (existingListing) {
       return res.status(400).json({
@@ -18,7 +19,34 @@ export const createListing = async (req, res, next) => {
       })
     }
 
+    // Check user's listing limit
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      return next(errorHandler(404, 'User not found'))
+    }
+
+    // Count user's current listings
+    const currentListings = await Listing.countDocuments({ userRef: user._id })
+
+    // Check if user has reached their limit
+    if (currentListings >= user.listingLimit) {
+      return res.status(403).json({
+        success: false,
+        message: `You have reached your listing limit of ${user.listingLimit}. Upgrade your plan to create more listings.`,
+        code: 'LISTING_LIMIT_REACHED',
+        currentListings,
+        limit: user.listingLimit,
+        subscription: user.subscription,
+      })
+    }
+
+    // Create the listing
     const listing = await Listing.create(req.body)
+
+    // Update user's listings created count
+    user.listingsCreated = currentListings + 1
+    await user.save()
+
     return res.status(201).json(listing)
   } catch (error) {
     next(error)

@@ -6,39 +6,108 @@ import { errorHandler } from '../utils/error.js'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import sendEmail from '../utils/sendEmail.js'
+import Stripe from 'stripe'
+import dotenv from 'dotenv'
+
+dotenv.config()
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export const signup = async (req, res, next) => {
   try {
-    const { email, password, username } = req.body
+    const { email, password, username, paymentMethodId } = req.body
+
+    // Validate required fields
+    if (!email || !password || !paymentMethodId) {
+      return next(
+        errorHandler(400, 'Email, password, and payment method are required')
+      )
+    }
 
     // Validate password length
-    if (!password || password.length < 8) {
+    if (password.length < 8) {
       return next(
         errorHandler(400, 'Password must be at least 8 characters long')
       )
     }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email })
     if (existingUser) {
       return next(errorHandler(409, 'User already exists'))
     }
 
+    // Create Stripe customer first
+    const customer = await stripe.customers.create({
+      email,
+      name: username || 'User',
+      metadata: {
+        registrationDate: new Date().toISOString(),
+      },
+    })
+
+    // Attach payment method to customer
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customer.id,
+    })
+
+    // Set as default payment method
+    await stripe.customers.update(customer.id, {
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    })
+
     const hashedPassword = await bcrypt.hash(password, 8)
 
-    // Create new user
+    // Create new user with Stripe information
     const newUser = new User({
       email,
       password: hashedPassword,
       username: username || 'anonymous',
       avatar: 'https://www.gravatar.com/avatar/?d=mp&f=y',
+      stripeCustomerId: customer.id,
+      paymentMethodId: paymentMethodId,
     })
 
     await newUser.save()
 
-    res.status(201).json({ message: 'User created successfully' })
+    // Remove sensitive information from response
+    const {
+      password: pass,
+      paymentMethodId: pmId,
+      ...userResponse
+    } = newUser._doc
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully with payment method',
+      user: userResponse,
+    })
   } catch (error) {
-    console.error(' error:', error)
-    next(errorHandler(500, 'error from the function'))
+    console.error('Signup error:', error)
+
+    // Handle Stripe-specific errors
+    if (error.type) {
+      switch (error.type) {
+        case 'StripeCardError':
+          return next(
+            errorHandler(
+              400,
+              'Invalid payment card. Please check your card details.'
+            )
+          )
+        case 'StripeInvalidRequestError':
+          return next(
+            errorHandler(400, 'Invalid payment information provided.')
+          )
+        default:
+          return next(
+            errorHandler(500, 'Payment processing error. Please try again.')
+          )
+      }
+    }
+
+    next(errorHandler(500, 'Error creating account'))
   }
 }
 
@@ -279,5 +348,33 @@ export const resetPassword = async (req, res, next) => {
   } catch (error) {
     console.error('Reset password error:', error)
     next(errorHandler(500, 'Error resetting password'))
+  }
+}
+
+// Create setup intent for card collection during signup
+export const createSetupIntent = async (req, res, next) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return next(errorHandler(400, 'Email is required'))
+    }
+
+    // Create setup intent for future payments
+    const setupIntent = await stripe.setupIntents.create({
+      usage: 'off_session',
+      metadata: {
+        email,
+        purpose: 'registration',
+      },
+    })
+
+    res.status(200).json({
+      success: true,
+      clientSecret: setupIntent.client_secret,
+    })
+  } catch (error) {
+    console.error('Setup intent error:', error)
+    next(errorHandler(500, 'Error creating payment setup'))
   }
 }

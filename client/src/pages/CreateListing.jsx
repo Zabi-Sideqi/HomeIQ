@@ -18,6 +18,8 @@ import { apiUrl } from '../utils/api'
 export default function CreateListing() {
   const { currentUser, token } = useSelector((state) => state.user)
   const [files, setFiles] = useState([])
+  const [userEligibility, setUserEligibility] = useState(null)
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
   const [formData, setFormData] = useState({
     imageUrls: [],
     thumbnailUrls: [],
@@ -51,8 +53,33 @@ export default function CreateListing() {
     if (!currentUser || !token) {
       toast.error('Please log in to create a listing.')
       navigate('/sign-in')
+    } else {
+      checkListingEligibility()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, token, navigate])
+
+  // Check user's listing eligibility
+  const checkListingEligibility = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/payment/check-eligibility'), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (data.success) {
+        setUserEligibility(data)
+        if (!data.canCreate) {
+          setShowUpgradePrompt(true)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking eligibility:', error)
+    }
+  }
 
   const handleChange = (e) => {
     const { id, value } = e.target
@@ -209,6 +236,15 @@ export default function CreateListing() {
       return
     }
 
+    // Check listing eligibility
+    if (userEligibility && !userEligibility.canCreate) {
+      toast.error(
+        `You have reached your listing limit of ${userEligibility.listingLimit}. Please upgrade your plan to create more listings.`
+      )
+      setShowUpgradePrompt(true)
+      return
+    }
+
     if (
       formData.offer &&
       Number(formData.discountPrice) >= Number(formData.regularPrice)
@@ -268,6 +304,77 @@ export default function CreateListing() {
   return (
     <main className='p-3 max-w-4xl mx-auto'>
       <ToastContainer />
+
+      {/* Upgrade Prompt Modal */}
+      {showUpgradePrompt && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg p-6 max-w-md mx-4'>
+            <h2 className='text-xl font-bold text-gray-900 mb-4'>
+              Listing Limit Reached
+            </h2>
+            <p className='text-gray-600 mb-4'>
+              You've reached your limit of {userEligibility?.listingLimit}{' '}
+              listing(s). Upgrade your plan to create more listings.
+            </p>
+            <div className='flex gap-3'>
+              <button
+                onClick={() => navigate('/pricing')}
+                className='flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700'
+              >
+                View Plans
+              </button>
+              <button
+                onClick={() => setShowUpgradePrompt(false)}
+                className='flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400'
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Status Banner */}
+      {userEligibility && (
+        <div
+          className={`mb-6 p-4 rounded-lg ${
+            userEligibility.canCreate
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-red-50 border border-red-200'
+          }`}
+        >
+          <div className='flex items-center justify-between'>
+            <div>
+              <h3
+                className={`font-medium ${
+                  userEligibility.canCreate ? 'text-green-900' : 'text-red-900'
+                }`}
+              >
+                {userEligibility.canCreate
+                  ? 'Ready to Create'
+                  : 'Limit Reached'}
+              </h3>
+              <p
+                className={`text-sm ${
+                  userEligibility.canCreate ? 'text-green-700' : 'text-red-700'
+                }`}
+              >
+                {userEligibility.remainingListings} of{' '}
+                {userEligibility.listingLimit} listings remaining
+              </p>
+            </div>
+            {!userEligibility.canCreate && (
+              <button
+                onClick={() => navigate('/pricing')}
+                className='bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700'
+              >
+                Upgrade
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <h1 className='text-3xl text-center font-semibold mt-4 my-7'>
         Create Listing
       </h1>

@@ -71,6 +71,9 @@ export const Header = () => {
           <Link to='/about'>
             <li className='text-slate-700 hover:underline'>About</li>
           </Link>
+          <Link to='/pricing'>
+            <li className='text-slate-700 hover:underline'>Pricing</li>
+          </Link>
           {currentUser && (
             <Link to='/favorites'>
               <li className='text-slate-700 hover:underline'>Favorites</li>
@@ -161,6 +164,13 @@ export const Header = () => {
           className='block py-2 text-slate-700 hover:underline'
         >
           About
+        </Link>
+        <Link
+          to='/pricing'
+          onClick={() => setMenuOpen(false)}
+          className='block py-2 text-slate-700 hover:underline'
+        >
+          Pricing
         </Link>
         {currentUser && (
           <Link

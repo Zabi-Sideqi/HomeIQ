@@ -7,10 +7,12 @@ import {
   signOut,
   forgotPassword,
   resetPassword,
+  createSetupIntent,
 } from '../controllers/auth.controller.js'
 
 const router = express.Router()
 
+router.post('/setup-intent', createSetupIntent)
 router.post('/signup', signup)
 router.post('/signin', signin)
 router.post('/google', google)
