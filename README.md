@@ -99,7 +99,7 @@ POST /api/listings/
 
 For questions, suggestions, or collaboration:
 
-- 📧 E-post: zabi.sideqi.com
+- 📧 E-post: zabi.sideqi@gmail.com
 - 🌐 Portfolio: https://lnkd.in/dS_Bc8Xh
 - 💼 LinkedIn: https://www.linkedin.com/in/zabi-sideqi-4564432a0/
 
